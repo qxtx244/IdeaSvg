@@ -1,4 +1,4 @@
-package com.qxtx.idea.ideasvg;
+package com.qxtx.idea.ideasvgdemo;
 
 import org.junit.Test;
 

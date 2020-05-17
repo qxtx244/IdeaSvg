@@ -1,4 +1,4 @@
-package com.qxtx.idea.ideasvg;
+package com.qxtx.idea.ideasvgdemo;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
 
-        assertEquals("com.qxtx.idea.ideasvg.test", appContext.getPackageName());
+        assertEquals("com.qxtx.idea.ideasvg", appContext.getPackageName());
     }
 }
