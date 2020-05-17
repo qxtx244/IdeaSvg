@@ -1,0 +1,15 @@
+ext {
+    javaVer = JavaVersion.VERSION_1_8
+
+    minSdkVer = 21
+    compileSdkVer = 26
+    targetSdkVer = 21
+    buildToolsVer = '26.0.2'
+
+    appcompat_v7 = '26.0.2'
+
+    appVersionCode = 1
+    appVersionName = '1.0.0'
+
+    lib_support_v7 = "com.android.support:appcompat-v7:$appcompat_v7"
+}

@@ -1,0 +1,2 @@
+include ':app', ':ideasvg'
+rootProject.name='IdeaSvg'
