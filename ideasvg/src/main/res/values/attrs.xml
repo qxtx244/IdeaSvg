@@ -3,36 +3,23 @@
 
     <!-- SvgView的自定义属性 -->
     <declare-styleable name="IdeaSvgView">
-        <!-- Drawable的显示风格
-         [auto] 默认处理
-         [fill]填充控件，如超过控件大小则缩小尺寸以将drawable完全显示在控件中
-         [fitXY] 强制将Drawable调整为控件尺寸大小，以铺满控件 -->
-        <attr name="drawableStyle" format="flags">
-            <flag name="auto" value="0x1"/>
-            <flag name="fill" value="0x2"/>
-            <flag name="fitXY" value="0x4"/>
-        </attr>
 
         <attr name="android:layout_width"/>
         <attr name="android:layout_height"/>
 
-        <!-- svg绘制模式，[outline]轮廓线条 [fill]填充 [outline_and_fill]填充+轮廓 -->
-        <attr name="svgStyle" format="flags">
-            <flag name="outline" value="0x1"/>
+        <!-- svg绘制模式，[stroke]轮廓 [fill]填充 [stroke_and_fill]填充+轮廓 -->
+        <attr name="style" format="flags">
+            <flag name="stroke" value="0x1"/>
             <flag name="fill" value="0x2"/>
-            <flag name="outline_and_fill" value="0x3"/>
+            <flag name="stroke_and_fill" value="0x3"/>
         </attr>
-        <!-- svg字符串 -->
-        <attr name="svgData" format="string"/>
-        <!-- 是否强制svg居中，当置为true时，所有的padding都将失效 -->
-        <attr name="forceCenter" format="boolean"/>
-        <!-- 轮廓线条宽度 -->
-        <attr name="outlineWidthPx" format="integer"/>
+        <!-- svg图形数据，可以是普通字符串，也可以是drawable中的vector资源 -->
+        <attr name="svg" format="string|reference"/>
+        <!-- 轮廓线条宽度，单位为px -->
+        <attr name="strokeWidthPx" format="integer"/>
         <!-- 轮廓线条颜色 -->
-        <attr name="outlineColor" format="color"/>
+        <attr name="strokeColor" format="color"/>
         <!-- svg填充颜色 -->
         <attr name="fillColor" format="color"/>
-        <!-- 为xml提供Vector Drawable支持 -->
-        <attr name="src" format="reference"/>
     </declare-styleable>
 </resources>
