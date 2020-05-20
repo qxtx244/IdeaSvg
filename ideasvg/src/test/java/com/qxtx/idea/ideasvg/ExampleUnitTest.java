@@ -1,6 +1,11 @@
 package com.qxtx.idea.ideasvg;
 
 import org.junit.Test;
+import org.xml.sax.XMLReader;
+
+import java.io.File;
+
+import javax.xml.parsers.SAXParser;
 
 import static org.junit.Assert.*;
 
@@ -12,6 +17,5 @@ import static org.junit.Assert.*;
 public class ExampleUnitTest {
     @Test
     public void addition_isCorrect() {
-        assertEquals(4, 2 + 2);
     }
 }
