@@ -2,6 +2,7 @@ package com.qxtx.idea.ideasvg.view;
 
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.content.res.XmlResourceParser;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -10,6 +11,8 @@ import android.os.Looper;
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -31,56 +34,56 @@ import java.util.List;
 public class IdeaSvgView extends View {
     private final String TAG = getClass().getSimpleName();
 
-    /** 画布宽度，可能为特殊值。见{@link #mHeight}*/
-    private int mWidth;
-
-    /** 画布高度，可能为特殊值。见{@link #mWidth} */
-    private int mHeight;
-
-    /** 此paint不参与svg的绘制，可能需要绘制背景，drawable等元素 */
-    private Paint mPaint;
-
-    private SvgParam mSvgParam;
-
-    private SvgParser mSvgParser;
-
-    public IdeaSvgView(Context context, AttributeSet attrs) {
-        super(context, attrs, 0, 0);
-        init(context, attrs);
-    }
+    /** 控件背景 */
+    private int mBgResId;
 
     /**
-     * 从attr中(一般为解析xml文件)获得各种预设的属性值，如果没找到，则使用默认的属性值
+     * 控件宽度
+     * @see #mHeight
+     */
+    private int mWidth;
+
+    /**
+     * 控件高度
+     * @see #mWidth
+     */
+    private int mHeight;
+
+    /** 此paint不参与svg的绘制，与绘制背景，drawable等元素有关 */
+    private Paint mPaint;
+
+    /** svg的参数集 */
+    private SvgParam mSvgParam;
+
+    /** svg数据解析器 */
+    private SvgParser mSvgParser;
+
+    /**
+     * 控件的构造方法，可以在这里获得控件的xml属性值
      * 1、属性获取优先顺序：xml直接定义 >> xml的style属性定义 >> 构造方法里defStyleAttr定义 >> 构造方法里defStyleRes定义 >> theme中直接定义
      */
-    private void init(@NonNull Context context, @NonNull AttributeSet attrs) {
+    public IdeaSvgView(Context context, AttributeSet attrs) {
+        super(context, attrs, 0, 0);
+
         mPaint = new Paint();
         mSvgParam = new SvgParam();
         mSvgParser = new SvgParser();
+
         //获得各种属性值
         TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.IdeaSvgView);
         try {
-            int attrCount = a.getIndexCount();
-            for (int i = 0; i < attrCount; i++) {
-                switch (a.getIndex(i)) {
-//                    case R.styleable.IdeaSvgView_android_layout_width:
-//                        break;
-                }
-            }
-
-            //获取宽高，如果没有，则认为宽高自适应
+            //获取控件宽高，有几种情况：
+            //只要有一个为wrap_content或match_parent，
+            //1、有具体的宽高值。此时，svgSrc中获得的宽高值被忽略。
+            //2、自适应(wrap_content)。svg使用svgSrc中标注的宽高
+            //3、铺满(match_parent)。svg使用svgSrc中标注的宽高
             mWidth = a.getLayoutDimension(R.styleable.IdeaSvgView_android_layout_width, ViewGroup.LayoutParams.WRAP_CONTENT);
             mHeight = a.getLayoutDimension(R.styleable.IdeaSvgView_android_layout_height, ViewGroup.LayoutParams.WRAP_CONTENT);
 
-//            String svg = a.getString(R.styleable.IdeaSvgView_svg);
-//            mIsForceCenter = a.getBoolean(R.styleable.IdeaSvgView_forceCenter, true);
-//            mSvgStyle = a.getInt(R.styleable.IdeaSvgView_svgStyle, SVG_OUTLINE);
-//            mDrawableStyle = a.getInt(R.styleable.IdeaSvgView_drawableStyle, DRAWABLE_AUTO);
-//            mStokeWidth = a.getInt(R.styleable.IdeaSvgView_outlineWidthPx, DEFAULT_OUTLINE_WIDTH);
-//            int color = a.getColor(R.styleable.IdeaSvgView_outlineColor, Color.parseColor(DEFAULT_OUTLINE_COLOR));
-//            mOutlineColors = new int[]{color};
-//            color = a.getColor(R.styleable.IdeaSvgView_outlineColor, Color.parseColor(DEFAULT_FILL_COLOR));
-//            mFillColors = new int[] {color};
+            parseSvgSrc(a);
+
+
+            mSvgParam.setAlpha(a.getFloat(R.styleable.IdeaSvgView_svgAlpha, mSvgParam.alpha));
         } catch (Exception e) {
             SvgLog.I("读取attr发生异常：" + e.getMessage());
             e.printStackTrace();
@@ -88,18 +91,27 @@ public class IdeaSvgView extends View {
         a.recycle();
     }
 
-    @Override
-    public void invalidate() {
-        super.invalidate();
-    }
-
-    @Override
-    public void postInvalidate() {
-        if (isUiThread()) {
-            invalidate();
+    /**
+     * 开始解析xml
+     * 注意如果控件有具体的宽高，则使用控件宽高作为svg宽高，而不是xml中标注的宽高
+     */
+    private void parseSvgSrc(@NonNull TypedArray a) {
+        final int INVALID_ID = Integer.MIN_VALUE;
+        int srcId = a.getResourceId(R.styleable.IdeaSvgView_svgSrc, INVALID_ID);
+        if (srcId == INVALID_ID) {
             return ;
         }
-        super.postInvalidate();
+
+        try {
+            XmlResourceParser parser = getResources().getXml(srcId);
+            if (parser.isEmptyElementTag()) {
+                return ;
+            }
+
+        } catch (Exception e) {
+            SvgLog.E("解析xml资源出现异常：" + e.getLocalizedMessage());
+            e.printStackTrace();
+        }
     }
 
     /** invalidate/postInvalidate会先被执行 */
@@ -152,6 +164,7 @@ public class IdeaSvgView extends View {
 
         /**
          * svg的实际尺寸，高16位是宽，低16位是高，大端序
+         * 如果此宽高数据任一为0，则强制使用虚拟画布宽高值
          * 注意，此宽高数据仅仅是定义了svg在实际画布下的尺寸，与路径的数值大小无关，而{@link #viewportSpec}则给路径提供了一个参考画布尺寸。
          * 可以通过{@link #viewportSpec}和此宽高数据的比值，可以计算出svg在实际画布尺寸下的路径数值，然后在view中绘制出真实尺寸的svg。
          *
@@ -173,8 +186,10 @@ public class IdeaSvgView extends View {
 
         /** svg绘制风格 */
         @Retention(RetentionPolicy.SOURCE)
-        @IntDef({STYLE_STROKE, STYLE_FILL, STYLE_STROKE_AND_FILL})
+        @IntDef({STYLE_UNKNOWN, STYLE_STROKE, STYLE_FILL, STYLE_STROKE_AND_FILL})
         public @interface Style{}
+        /** 未知风格 */
+        public static final int STYLE_UNKNOWN = 0;
         /** 轮廓风格 */
         public static final int STYLE_STROKE = 0x1;
         /** 填充风格 */
@@ -205,6 +220,22 @@ public class IdeaSvgView extends View {
             fillColors = new int[] {Color.parseColor(DEFAULT_FILL_COLOR)};
             spec = -1;
             viewportSpec = -1;
+        }
+
+        public int getWidth() {
+            return (spec >> 16) & 0xffff0000;
+        }
+
+        public int getHeight() {
+            return spec & 0xffff;
+        }
+
+        public int getViewportWidth() {
+            return (viewportSpec >> 16) & 0xffff0000;
+        }
+
+        public int getViewportHeight() {
+            return viewportSpec & 0xffff;
         }
 
         public LinkedHashMap<String, float[]> getPathDataMap() {

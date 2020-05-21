@@ -4,22 +4,30 @@
     <!-- SvgView的自定义属性 -->
     <declare-styleable name="IdeaSvgView">
 
+        <!-- 控件背景 -->
+        <attr name="android:background"/>
+        <!-- 控件宽 -->
         <attr name="android:layout_width"/>
+        <!-- 控件高 -->
         <attr name="android:layout_height"/>
 
-        <!-- svg绘制模式，[stroke]轮廓 [fill]填充 [stroke_and_fill]填充+轮廓 -->
-        <attr name="style" format="flags">
-            <flag name="stroke" value="0x1"/>
-            <flag name="fill" value="0x2"/>
-            <flag name="stroke_and_fill" value="0x3"/>
-        </attr>
-        <!-- svg图形数据，可以是普通字符串，也可以是drawable中的vector资源 -->
-        <attr name="svg" format="string|reference"/>
-        <!-- 轮廓线条宽度，单位为px -->
-        <attr name="strokeWidthPx" format="integer"/>
-        <!-- 轮廓线条颜色 -->
-        <attr name="strokeColor" format="color"/>
-        <!-- svg填充颜色 -->
-        <attr name="fillColor" format="color"/>
+        <!-- svg图形数据，引用vector xml -->
+        <attr name="svgSrc" format="reference"/>
+        <!-- svg的透明度，当定义了此属性，则svgSrc中定义的alpha值将会被忽略 -->
+        <attr name="svgAlpha" format="float"/>
+
+<!--        &lt;!&ndash; svg绘制模式，[stroke]轮廓 [fill]填充 [stroke_and_fill]填充+轮廓 &ndash;&gt;-->
+<!--        <attr name="svgStyle" format="flags">-->
+<!--            <flag name="stroke" value="0x1"/>-->
+<!--            <flag name="fill" value="0x2"/>-->
+<!--            <flag name="stroke_and_fill" value="0x3"/>-->
+<!--        </attr>-->
+<!--        -->
+<!--        &lt;!&ndash; 轮廓线条宽度，单位为px &ndash;&gt;-->
+<!--        <attr name="strokeWidthPx" format="integer"/>-->
+<!--        &lt;!&ndash; 轮廓线条颜色 &ndash;&gt;-->
+<!--        <attr name="strokeColor" format="enum"/>-->
+<!--        &lt;!&ndash; svg填充颜色 &ndash;&gt;-->
+<!--        <attr name="fillColor" format="color"/>-->
     </declare-styleable>
 </resources>
