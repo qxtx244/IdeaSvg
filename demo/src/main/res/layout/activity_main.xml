@@ -7,9 +7,8 @@
     <com.qxtx.idea.ideasvg.view.IdeaSvgView
         android:id="@+id/viewSvg"
         android:background="@mipmap/bg"
-        app:svgSrc="@drawable/ic_socket"
-        app:svgStyle="stroke"
-        app:svgAlpha="1f"
+        app:svgSrc="@drawable/ic_icon_mock5"
+        app:svgAlpha="1.0"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 
