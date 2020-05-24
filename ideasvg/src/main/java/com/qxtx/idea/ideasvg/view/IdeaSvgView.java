@@ -4,32 +4,15 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.content.res.XmlResourceParser;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Path;
-import android.os.Looper;
-import android.support.annotation.IntDef;
-import android.support.annotation.NonNull;
-import android.text.Layout;
-import android.text.TextUtils;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import com.qxtx.idea.ideasvg.R;
 import com.qxtx.idea.ideasvg.entity.SvgParam;
 import com.qxtx.idea.ideasvg.parser.SvgParser;
 import com.qxtx.idea.ideasvg.tools.SvgLog;
-
-import org.xmlpull.v1.XmlPullParser;
-
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
 
 /**
  * @author QXTX-WIN

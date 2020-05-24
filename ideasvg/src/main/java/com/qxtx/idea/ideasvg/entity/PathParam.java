@@ -3,6 +3,9 @@ package com.qxtx.idea.ideasvg.entity;
 import android.graphics.Color;
 import android.graphics.Path;
 
+import com.qxtx.idea.ideasvg.parser.SvgParser;
+import com.qxtx.idea.ideasvg.tools.SvgLog;
+
 import java.util.LinkedHashMap;
 
 /**
@@ -18,7 +21,7 @@ public final class PathParam {
     private final Path path;
 
     /** 由{@link #pathData}生成的路径对象，用于生成{@link #path} */
-    private final LinkedHashMap<String, float[]> pathDataMap;
+    private LinkedHashMap<String, float[]> pathDataMap;
 
     /** 原始的path字符串数据，用于生成{@link #pathDataMap} */
     private String pathData;
@@ -53,7 +56,7 @@ public final class PathParam {
      */
     public PathParam() {
         path = new Path();
-        pathDataMap = new LinkedHashMap<>();
+        pathDataMap = null;
         pathData = null;
 
         strokeWidth = Float.MIN_VALUE;
@@ -74,13 +77,21 @@ public final class PathParam {
     }
 
     private void onPathDataUpdate() {
-        //更新pathDataMap
+        try {
+            //更新pathDataMap
+            pathDataMap = SvgParser.parsePathData(pathData);
 
-        //一旦pathDataMap有变动，path将会被同步更新
-        onPathDataMapUpdate();
+            //一旦pathDataMap有变动，path将会被同步更新
+            onPathDataMapUpdate();
+        } catch (Exception e) {
+            SvgLog.i("异常！" + e);
+            e.printStackTrace();
+        }
     }
 
     private void onPathDataMapUpdate() {
+        path.reset();
+
         //更新Path
     }
 
@@ -97,7 +108,7 @@ public final class PathParam {
     }
 
     /** 一旦更新这个变量，则与其对应的{@link #pathDataMap}也将会被立即更新 */
-    public void updatePathData(String pathData) {
+    public void setPathData(String pathData) {
         this.pathData = pathData;
         onPathDataUpdate();
     }
@@ -210,7 +221,7 @@ public final class PathParam {
     public String toString() {
         return "PathParam{" +
                 "path empty? " + path.isEmpty() +
-                ", pathDataMap size=" + pathDataMap.size() +
+                ", pathDataMap size=" + (pathDataMap == null ? -1 : pathDataMap.size()) +
                 ", pathData='" + pathData +
                 ", strokeWidth=" + strokeWidth +
                 ", strokeColor=" + strokeColor +

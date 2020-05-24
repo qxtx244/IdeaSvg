@@ -1,2 +1,2 @@
-include ':demo', ':ideasvg'
+include ':demo', ':ideasvg', ':ideasvg-old'
 rootProject.name='IdeaSvg'

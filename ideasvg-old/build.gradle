@@ -1,0 +1,39 @@
+apply plugin: 'com.android.library'
+
+apply from: 'constants.gradle'
+apply from: '../constants.gradle'
+
+android {
+    compileSdkVersion compileSdkVer
+
+    defaultConfig {
+        minSdkVersion minSdkVer
+        targetSdkVersion targetSdkVer
+        versionCode appVersionCode
+        versionName appVersionName
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility = javaVer
+        targetCompatibility = javaVer
+    }
+
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    implementation 'com.android.support:appcompat-v7:' + appcompat_v7
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+}

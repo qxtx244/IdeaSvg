@@ -5,7 +5,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import com.qxtx.idea.ideasvg.view.IdeaSvgView;
 
-
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private IdeaSvgView viewSvg;

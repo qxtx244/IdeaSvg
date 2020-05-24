@@ -1,4 +1,4 @@
-package com.qxtx.idea.ideasvg;
+package com.qxtx.idea.svg;
 
 import android.support.annotation.IntDef;
 

@@ -1,4 +1,4 @@
-package com.qxtx.idea.ideasvg.tools;
+package com.qxtx.idea.svg.tools;
 
 import android.util.Log;
 
@@ -29,26 +29,6 @@ public final class SvgLog {
     }
 
     public static void WTF(String... msg) {
-        log("WTF", msg);
-    }
-
-    public static void e(String... msg) {
-        log("E", msg);
-    }
-
-    public static void i(String... msg) {
-        log("I", msg);
-    }
-
-    public static void w(String... msg) {
-        log("W", msg);
-    }
-
-    public static void d(String... msg) {
-        log("D", msg);
-    }
-
-    public static void wtf(String... msg) {
         log("WTF", msg);
     }
 
