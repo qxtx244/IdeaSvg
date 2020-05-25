@@ -219,59 +219,42 @@ public final class SvgParser implements IParser {
         if (TextUtils.isEmpty(pathData)) {
             return null;
         }
-
         SvgLog.i("生成数据集前，字符串=" + pathData);
 
         int totalLen = pathData.length();
 
         LinkedHashMap<String, float[]> resultMap = new LinkedHashMap<>();
 
-        //寻找起始锚点符M/m
-        int pos = 0;
-        while (pos < totalLen) {
-            char ch = pathData.charAt(pos);
-            if (CharUtil.toUpper(ch) == SvgConsts.SVG_START_CHAR_UPPER) {
-                //将第一个锚点符强制转换为大写，并丢弃之前的无效字符
-                if (!Character.isUpperCase(ch)) {
-                    SvgLog.i("发生事件：强制将起始锚点符转换成大写，并丢弃它之前的无效字符");
-                    pathData = SvgConsts.SVG_START_CHAR_UPPER + pathData.substring(pos + 1);
-                }
-                break;
-            }
-
-            pos++;
-            if (pos == totalLen) {
-                SvgLog.I("无法解析的path字符串！pathData=[" + pathData + "].");
-                return null;
-            }
+        //找到起始锚点符M/m，并强制大写，丢弃之前的无效字符
+        int pos = findFirstAnchor(pathData);
+        if (pos < 0) {
+            SvgLog.I("找不到svg的起始锚点符。pathData=[" + pathData + "].");
+            return null;
+        } else if (Character.isLowerCase(pathData.charAt(pos))) {
+            pathData = SvgConsts.SVG_START_CHAR_UPPER + pathData.substring(pos + 1);
         }
 
         //使pos指向起始锚点符位置
         pos = 0;
 
         //循环会从一个[M]或[m]开始
-        //每一次循环的开始，都会指向一个锚点符
-        char lastAnchor;
+        //每次循环都会获取到一个或多个子路径（具有连续相同锚点符的多条子路径）完整数据
         while (pos < totalLen) {
             char ch = pathData.charAt(pos);
-
-            if (!CharUtil.isSvgChar(ch)) {
+            //保证当前指向字符是锚点符。
+            //如果是[空格]或[逗号]分隔符，则跳过
+            if (ch == ' ' || ch == ',') {
+                pos++;
+                continue;
+            }
+            //最终指向一个锚点符
+            if (!CharUtil.isAnchor(ch)) {
+                SvgLog.i("发现非法字符，解析失败：[" + ch + "]. pos[" + pos + "].");
                 return null;
             }
-
-            //保证当前指向字符是锚点符，如果是空格或逗号分隔符，则跳过，如果是数值字符，则认为锚点符被省略了，自动添加锚点符
-            if (CharUtil.maybeValueDelimiter(ch)) {
-                if (ch == ' ' || ch == ',') {
-                    pos++;
-                    continue;
-                } else {
-
-                }
-            }
-
             char anchor = ch;
 
-            //如果是结束锚点符，则可以立即完成本次循环任务，进行下一次循环
+            //如果是结束锚点符Z/z，则可以立即完成本次循环任务，进行下一次循环
             if (CharUtil.toUpper(anchor) == SvgConsts.SVG_END_CHAR_UPPER) {
                 SvgLog.i("发现结束锚点符" + anchor + ", 快速完成本次循环任务");
                 addSubPath(resultMap, anchor, null);
@@ -279,15 +262,7 @@ public final class SvgParser implements IParser {
                 continue;
             }
 
-            //获取锚点符所需数值的个数
-            if (valuesNeed < 0) {
-                SvgLog.i("path字符串中存在非法锚点符！锚点符[" + anchor + "].");
-                return null;
-            }
-
-            //开始向右遍历，取出足够个数的值
-            //一个数值的结尾标志：空格，逗号，负号，小数点，锚点符
-            //如果碰到小数点，则记录下来，下一次再碰到小数点，则这个小数点为当前数值的结束标志，并且它是下一个数值的小数点，省略了前面的0字符
+            //开始向右遍历，直到碰到下一个锚点符，或者到达结尾
             //每一次循环，都会得到一个数值，并且循环开始时游标指向一个分隔符。如果发现是小数点，则先添加[0.]，再继续逻辑
             float[] values = new float[valuesNeed];
             for (int i = 0; i < valuesNeed; i++) {
@@ -305,6 +280,8 @@ public final class SvgParser implements IParser {
                     pos++;
                 }
 
+                //一个数值的结尾标志：空格，逗号，负号，小数点，锚点符
+                //如果碰到小数点，则记录下来，下一次再碰到小数点，则这个小数点为当前数值的结束标志，并且它是下一个数值的小数点，省略了前面的0字符
                 while (pos < totalLen) {
                     if (pos + 1 == totalLen) {
                         SvgLog.i("path字符串不完整！pathData=" + pathData);
@@ -354,6 +331,30 @@ public final class SvgParser implements IParser {
         return resultMap;
     }
 
+    /**
+     * 找到起始的锚点符
+     * @param pathData path字符串数据
+     * @return 起始锚点符在字符串中的位置，如果没有，则返回Integer.MIN_VALUE
+     */
+    private static int findFirstAnchor(@NonNull String pathData) {
+        int totalLen = pathData.length();
+
+        int pos = 0;
+        while (pos < totalLen) {
+            char ch = pathData.charAt(pos);
+            if (CharUtil.toUpper(ch) == SvgConsts.SVG_START_CHAR_UPPER) {
+                break;
+            }
+
+            pos++;
+
+            if (pos == totalLen) {
+                return Integer.MIN_VALUE;
+            }
+        }
+        SvgLog.i("svg字符串起始锚点符[" + pathData.charAt(pos) + "],位置：" + pos);
+        return pos;
+    }
 
     private static void addSubPath(@NonNull LinkedHashMap<String, float[]> map, char anchor, float[] values) {
         map.put(anchor + "" + map.size(), values);
