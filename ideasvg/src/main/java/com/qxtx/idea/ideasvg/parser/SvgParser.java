@@ -12,6 +12,7 @@ import com.qxtx.idea.ideasvg.tools.SvgLog;
 
 import org.xmlpull.v1.XmlPullParser;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -215,7 +216,7 @@ public final class SvgParser implements IParser {
      * 遍历pathData，每一次循环，得到一条子路径（包含一个锚点符）；
      * 1、寻找起始的锚点符M
      */
-    public static LinkedHashMap<String, float[]> parsePathData(@NonNull String pathData) {
+    public static LinkedHashMap<String, List<Float>> parsePathData(@NonNull String pathData) {
         if (TextUtils.isEmpty(pathData)) {
             return null;
         }
@@ -223,24 +224,28 @@ public final class SvgParser implements IParser {
 
         int totalLen = pathData.length();
 
-        LinkedHashMap<String, float[]> resultMap = new LinkedHashMap<>();
+        LinkedHashMap<String, List<Float>> resultMap = new LinkedHashMap<>();
 
         //找到起始锚点符M/m，并强制大写，丢弃之前的无效字符
         int pos = findFirstAnchor(pathData);
         if (pos < 0) {
             SvgLog.I("找不到svg的起始锚点符。pathData=[" + pathData + "].");
             return null;
-        } else if (Character.isLowerCase(pathData.charAt(pos))) {
-            pathData = SvgConsts.SVG_START_CHAR_UPPER + pathData.substring(pos + 1);
+        } else {
+            if (Character.isLowerCase(pathData.charAt(pos))) {
+                pathData = SvgConsts.SVG_START_CHAR_UPPER + pathData.substring(pos + 1);
+                SvgLog.i("字符串发生重组：" + pathData);
+                //使pos指向起始锚点符位置
+                pos = 0;
+            }
         }
 
-        //使pos指向起始锚点符位置
-        pos = 0;
-
         //循环会从一个[M]或[m]开始
-        //每次循环都会获取到一个或多个子路径（具有连续相同锚点符的多条子路径）完整数据
+        //每次循环都会获取到一个子路径数据（也可能具有连续相同锚点符的多条子路径数据拼接）完整数据
+        char ch;
         while (pos < totalLen) {
-            char ch = pathData.charAt(pos);
+            SvgLog.i("一次子路径循环开始位置：" + pos);
+            ch = pathData.charAt(pos);
             //保证当前指向字符是锚点符。
             //如果是[空格]或[逗号]分隔符，则跳过
             if (ch == ' ' || ch == ',') {
@@ -263,72 +268,93 @@ public final class SvgParser implements IParser {
             }
 
             //开始向右遍历，直到碰到下一个锚点符，或者到达结尾
-            //每一次循环，都会得到一个数值，并且循环开始时游标指向一个分隔符。如果发现是小数点，则先添加[0.]，再继续逻辑
-            float[] values = new float[valuesNeed];
-            for (int i = 0; i < valuesNeed; i++) {
-                //直到获取一个完整的数值
-                sb.delete(0, sb.length());
-                boolean decimalPointReady = false;
-                boolean minusSignReady = false;
-
-                if (pathData.charAt(pos) == '.') {
-                    sb.append("0.");
-                }
-
-                //分隔符下一个不能是 空格或逗号分隔符
-                while (pathData.charAt(pos + 1) == ' ' || pathData.charAt(pos + 1) == ',') {
-                    pos++;
-                }
-
+            //不断获取数值，直到碰到锚点符，完成遍历
+            List<Float> valueList = new ArrayList<>();
+            sb.delete(0, sb.length());
+            boolean decimalPointReady = false;
+            boolean negPointReady = false;
+            while (++pos < totalLen) {
+                //可能的字符：分隔符，锚点符，普通数值
                 //一个数值的结尾标志：空格，逗号，负号，小数点，锚点符
                 //如果碰到小数点，则记录下来，下一次再碰到小数点，则这个小数点为当前数值的结束标志，并且它是下一个数值的小数点，省略了前面的0字符
-                while (pos < totalLen) {
-                    if (pos + 1 == totalLen) {
-                        SvgLog.i("path字符串不完整！pathData=" + pathData);
-                        return null;
+                ch = pathData.charAt(pos);
+
+                if (CharUtil.isAnchor(ch)) {
+                    //碰到锚点符，本次子路径数据已全部获取到，完成循环
+                    if (sb.length() > 0) {
+                        if (!addValue(valueList)) {
+                            return null;
+                        }
                     }
-                    char ch = pathData.charAt(++pos);
-
-                    //可能碰到分隔符，则认为一个数值的字符串已经获取完成
-                    //小数点可能是分隔符（如果前面已经存在小数点），也可能不是。
-                    if (CharUtil.maybeValueDelimiter(ch)) {
-                        //特殊情况1，小数点不属于数值分隔符
-                        if (ch == '.' && !decimalPointReady) {
-                            decimalPointReady = true;
-                            sb.append(ch);
-                            continue;
-                        } else if (ch == '-' && !minusSignReady) {
-                            //特殊情况2：负数符号不属于数值分隔符
-                            minusSignReady = true;
-                            sb.append(ch);
-                            continue;
-                        }
-
-                        String valueStr = sb.toString();
-                        SvgLog.i("数值：" + valueStr);
-                        if (valueStr.charAt(0) == '.') {
-                            valueStr = "0" + valueStr;
-                        }
-                        try {
-                            values[i] = Float.parseFloat(valueStr);
-                        } catch (Exception e) {
-                            SvgLog.i("解析数值异常。cause=" + e.getLocalizedMessage());
+                    SvgLog.i("一个数值获取完成，当前位置：" + pos);
+                    break;
+                } else if (CharUtil.maybeValueDelimiter(ch)) {
+                    //如果碰到的是[,]或[ ]，①说明一个数值的数据获取完成，并且跳过之后连续的[,]或[ ]
+                    //如果碰到的是[-]或[.]，如果前面已经保存过一次此类符号，说明当前子符为分隔符而不是数值字符，否则为数值字符
+                    if (ch == ',' || ch == ' ') {
+                        if (!addValue(valueList)) {
                             return null;
                         }
 
-                        break;
+                        //跳过后面连续的分隔符
+                        int checkPos = pos + 1;
+                        while (checkPos < totalLen) {
+                            char nextChar = pathData.charAt(checkPos);
+                            if (nextChar != ',' && nextChar != ' ') {
+                                pos = checkPos - 1;
+                                break;
+                            }
+                            checkPos++;
+                        }
+                        sb.delete(0, sb.length());
+                        negPointReady = false;
+                        decimalPointReady = false;
+                        SvgLog.i("一个数值获取完成，当前位置：" + pos);
                     } else {
-                        sb.append(ch);
+                        boolean isNextValueChar = (ch == '-' && negPointReady) || (ch == '.' && decimalPointReady);
+                        //碰到的是[-]或[.]
+                        if (isNextValueChar) {
+                            //碰到了下一个数值的字符，立即完成当前字符的保存
+                            if (!addValue(valueList)) {
+                                return null;
+                            }
+
+                            sb.delete(0, sb.length());
+                            //如果是[.]，说明下一个数值起始的[0]被省略了，自动补上
+                            if (ch == '.') {
+                                sb.append("0.");
+                            }
+                            SvgLog.i("一个数值获取完成，当前位置：" + pos);
+                        } else {
+                            sb.append(ch);
+                        }
+
+                        negPointReady = (ch == '-') != negPointReady;
+                        decimalPointReady = (ch == '.') != decimalPointReady;
                     }
+                } else {
+                    sb.append(ch);
                 }
             }
 
-            addSubPath(resultMap, anchor, values);
-
-            lastAnchor = anchor;
+            addSubPath(resultMap, anchor, valueList);
         }
 
         return resultMap;
+    }
+
+    /** 添加一个数值到数值列表 */
+    private static boolean addValue(List<Float> list) {
+        String value = sb.toString();
+        SvgLog.i("得到一个数值：" + value);
+        try {
+            list.add(Float.parseFloat(value));
+        } catch (Exception e) {
+            SvgLog.i("解析数值异常。cause=" + e.getLocalizedMessage());
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -356,7 +382,7 @@ public final class SvgParser implements IParser {
         return pos;
     }
 
-    private static void addSubPath(@NonNull LinkedHashMap<String, float[]> map, char anchor, float[] values) {
+    private static void addSubPath(@NonNull LinkedHashMap<String, List<Float>> map, char anchor, List<Float> values) {
         map.put(anchor + "" + map.size(), values);
     }
 }

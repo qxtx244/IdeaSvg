@@ -10,6 +10,8 @@ import android.util.Log;
  */
 public final class SvgLog {
 
+    private static boolean isAllowLog = false;
+
     private static final String TAG = "SvgLog";
 
     public static void E(String... msg) {
@@ -53,6 +55,10 @@ public final class SvgLog {
     }
 
     private static void log(String level, String... msg) {
+        if (!isAllowLog) {
+            return ;
+        }
+
         String callerLog = "";
         StackTraceElement[] ste = Thread.currentThread().getStackTrace();
         //排除调用栈自己的2个，本方法自己1个， 从第4个开始

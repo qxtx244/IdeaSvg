@@ -218,13 +218,11 @@ public class SvgParam {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             if (pathParamList != null) {
-                pathParamList.forEach((pathParam) -> {
-                    sb.append(pathParam.toString()).append("\n\t");
-                });
+                for (PathParam item : pathParamList) {
+                    sb.append("M").append(item.getPathDataMap().get("M0").get(0)).append("\n\t");
+                }
             }
-        }
 
         return "SvgParam{" +
                 "width=" + width +
@@ -233,11 +231,12 @@ public class SvgParam {
                 ", offsetX=" + offsetX +
                 ", offsetY=" + offsetY +
                 ", alpha=" + alpha +
-                ", pathParamList=" + sb.toString() +
-                ", preserveAspectRatio='" + preserveAspectRatio + '\'' +
-                ", name='" + name + '\'' +
-                ", tint='" + tint + '\'' +
-                ", tintMode='" + tintMode + '\'' +
+                ", pathParamList size=" + pathParamList.size() +
+                ", \npathParamList=" + "\n" + sb.toString() + "\n" +
+                ", preserveAspectRatio='" + preserveAspectRatio +
+                ", name='" + name +
+                ", tint='" + tint  +
+                ", tintMode='" + tintMode +
                 ", autoMirrored=" + autoMirrored +
                 '}';
     }

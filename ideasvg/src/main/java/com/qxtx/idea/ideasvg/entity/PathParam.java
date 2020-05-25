@@ -7,6 +7,7 @@ import com.qxtx.idea.ideasvg.parser.SvgParser;
 import com.qxtx.idea.ideasvg.tools.SvgLog;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 
 /**
  * CreateDate 2020/5/23 18:04
@@ -21,7 +22,7 @@ public final class PathParam {
     private final Path path;
 
     /** 由{@link #pathData}生成的路径对象，用于生成{@link #path} */
-    private LinkedHashMap<String, float[]> pathDataMap;
+    private LinkedHashMap<String, List<Float>> pathDataMap;
 
     /** 原始的path字符串数据，用于生成{@link #pathDataMap} */
     private String pathData;
@@ -99,7 +100,7 @@ public final class PathParam {
         return path;
     }
 
-    public LinkedHashMap<String, float[]> getPathDataMap() {
+    public LinkedHashMap<String, List<Float>> getPathDataMap() {
         return pathDataMap;
     }
 
@@ -219,9 +220,21 @@ public final class PathParam {
 
     @Override
     public String toString() {
+        StringBuilder sb = new StringBuilder();
+        if (pathDataMap != null) {
+            for (String key : pathDataMap.keySet()) {
+                List<Float> valueList = pathDataMap.get(key);
+                if (valueList != null) {
+                    for (Float value : valueList) {
+                        sb.append(value).append(",");
+                    }
+                }
+            }
+        }
+
         return "PathParam{" +
-                "path empty? " + path.isEmpty() +
-                ", pathDataMap size=" + (pathDataMap == null ? -1 : pathDataMap.size()) +
+                "path= " + (path.isEmpty() ? "[无]" : "[有数据]") +
+                ", pathDataMap=[" + sb.toString() + "]" +
                 ", pathData='" + pathData +
                 ", strokeWidth=" + strokeWidth +
                 ", strokeColor=" + strokeColor +

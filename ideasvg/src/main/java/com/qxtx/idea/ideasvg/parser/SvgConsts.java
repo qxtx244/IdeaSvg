@@ -46,7 +46,7 @@ final class SvgConsts {
     };
 
     /** path数值之间的分隔符（大写形式） */
-    static final String VALUE_DELIMITER_UPPER = " ,.-" + SVG_ANCHOR_UPPER;
+    static final String VALUE_DELIMITER_UPPER = " ,.-";
 
     /** 锚点符以外的有效字符 */
     static final String SVG_CHAR_OTHER = ".0123456789,- ";

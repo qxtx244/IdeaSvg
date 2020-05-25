@@ -6,6 +6,7 @@ import android.content.res.XmlResourceParser;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -88,7 +89,8 @@ public class IdeaSvgView extends View implements ISvgView {
         }
         a.recycle();
 
-        SvgLog.I("耗时：" + (System.currentTimeMillis() - durationMs) + "ms.");
+        Log.i("SvgLog","耗时：" + (System.currentTimeMillis() - durationMs) + "ms.");
+//        SvgLog.I("耗时：" + (System.currentTimeMillis() - durationMs) + "ms.");
 
         SvgLog.I("获得的参数：" + mSvgParam.toString());
     }
