@@ -77,23 +77,72 @@ public final class PathParam {
         trimPathEnd = Float.MIN_VALUE;
     }
 
-    private void onPathDataUpdate() {
+    private void generatePathDataMap() {
         try {
             //更新pathDataMap
             pathDataMap = SvgParser.parsePathData(pathData);
 
             //一旦pathDataMap有变动，path将会被同步更新
-            onPathDataMapUpdate();
+            generatePath();
         } catch (Exception e) {
             SvgLog.i("异常！" + e);
             e.printStackTrace();
         }
     }
 
-    private void onPathDataMapUpdate() {
+    private void generatePath() {
         path.reset();
-
         //更新Path
+        if (pathDataMap == null || pathDataMap.size() == 0) {
+            return ;
+        }
+
+        for (String key : pathDataMap.keySet()) {
+            List<Float> value = pathDataMap.get(key);
+            switch (key.charAt(0)) {
+                case 'M': //2
+
+                    break;
+                case 'H': //1
+                    break;
+                case 'V': //1
+                    break;
+                case 'L': //2
+                    break;
+                case 'T': //2
+                    break;
+                case 'S': //4
+                    break;
+                case 'Q': //4
+                    break;
+                case 'C': //6
+                    break;
+                case 'A': //7
+                    break;
+                case 'Z':
+
+                case 'z':
+                    break;
+                case 'm': //2
+                    break;
+                case 'h': //1
+                    break;
+                case 'v': //1
+                    break;
+                case 'l': //2
+                    break;
+                case 't': //2
+                    break;
+                case 's': //4
+                    break;
+                case 'q': //4
+                    break;
+                case 'c': //6
+                    break;
+                case 'a': //7
+                    break;
+            }
+        }
     }
 
     public Path getPath() {
@@ -111,7 +160,7 @@ public final class PathParam {
     /** 一旦更新这个变量，则与其对应的{@link #pathDataMap}也将会被立即更新 */
     public void setPathData(String pathData) {
         this.pathData = pathData;
-        onPathDataUpdate();
+        generatePathDataMap();
     }
 
     public float getStrokeWidth() {
