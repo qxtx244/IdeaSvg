@@ -10,7 +10,7 @@ import android.util.Log;
  */
 public final class SvgLog {
 
-    private static boolean isAllowLog = false;
+    private static boolean isAllowLog = true;
 
     private static final String TAG = "SvgLog";
 

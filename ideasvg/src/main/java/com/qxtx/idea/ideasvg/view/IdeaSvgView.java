@@ -4,7 +4,11 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.content.res.XmlResourceParser;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.VectorDrawable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
@@ -14,6 +18,9 @@ import com.qxtx.idea.ideasvg.R;
 import com.qxtx.idea.ideasvg.entity.SvgParam;
 import com.qxtx.idea.ideasvg.parser.SvgParser;
 import com.qxtx.idea.ideasvg.tools.SvgLog;
+
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserFactory;
 
 /**
  * @author QXTX-WIN
@@ -89,10 +96,7 @@ public class IdeaSvgView extends View implements ISvgView {
         }
         a.recycle();
 
-        Log.i("SvgLog","耗时：" + (System.currentTimeMillis() - durationMs) + "ms.");
-//        SvgLog.I("耗时：" + (System.currentTimeMillis() - durationMs) + "ms.");
-
-        SvgLog.I("获得的参数：" + mSvgParam.toString());
+        SvgLog.I("解析耗时：" + (System.currentTimeMillis() - durationMs) + "ms.\n 获得的参数：" + mSvgParam.toString());
     }
 
     /** invalidate/postInvalidate会先被执行 */
@@ -102,12 +106,79 @@ public class IdeaSvgView extends View implements ISvgView {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
     }
 
+    /**
+     * //LYX_TAG 2020/6/3 23:32 可能会出现这样一种情况：两个端点坐标和长短轴值对不上（即计算cxx和cyy时那个平方根里是负数），这时候应该先通过两个坐标点推算出椭圆方程，再计算得到长短轴长度
+     * @param canvas
+     */
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-//        long time = System.currentTimeMillis();
+        Paint paint = new Paint();
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setColor(Color.parseColor("#00ff00"));
+        paint.setStrokeWidth(5f);
+        Path path = new Path();
 
-//        SvgLog.I("onDraw() time=" + (System.currentTimeMillis() - time) + "ms");
+        long time = System.currentTimeMillis();
+
+        //圆弧起点坐标x1，y1
+        double x1 = 100, y1 = 200;
+        //rx长半轴，ry短半轴
+        double rx= 100, ry = 70;
+        //椭圆x轴与画布x轴的夹角（顺时针夹角）
+        double phi = 0;
+        //fa大圆弧1小圆弧0，fs顺时针1逆时针0
+        int fA = 0, fS = 0;
+        //终点坐标x2，y2
+        double x2 = 250, y2 = 260.6217782649107;
+
+        double cosPhi = Math.cos(phi);
+        double sinPhi = Math.sin(phi);
+
+        double deltaXHalf = (x1 - x2) / 2;
+        double deltaYHalf = (y1 - y2) / 2;
+        double x11 = cosPhi * deltaXHalf + sinPhi * deltaYHalf;
+        double y11 = (-sinPhi) * deltaXHalf + cosPhi * deltaYHalf;
+
+        double rxy11Pow2 = Math.pow(rx * y11, 2);
+        double ryx11Pow2 = Math.pow(ry * x11, 2);
+        double sqrtValue = Math.sqrt(Math.abs((Math.pow(rx * ry, 2) - rxy11Pow2 - ryx11Pow2) / (rxy11Pow2 + ryx11Pow2)));
+        double cxx = sqrtValue * rx * y11 / ry;
+        double cyy = sqrtValue * (-ry) * x11 / rx;
+        if (fA == fS) {
+            cxx *= -1;
+            cyy *= -1;
+        }
+
+        //得到中心坐标
+        double cx = cosPhi * cxx - sinPhi * cyy + ((x1 + x2) / 2);
+        double cy = sinPhi * cxx + cosPhi * cyy + ((y1 + y2) / 2);
+
+        SvgLog.i("数值：x11,y11=" + x11 + "," + y11 + "  cxx,cyy=" + cxx + "," + cyy + "  cx,xy=" + cx + "," + cy);
+        SvgLog.i("数值：sqrtValue=" + sqrtValue);
+
+        //通过x1 —> x2的x坐标值递增，得到对应的y坐标值，逐个lineTo，细粒度为1°
+        path.moveTo((float)x1, (float)y1);
+
+        double testY = cy + Math.sqrt(1 - Math.pow(250 - cx, 2) / Math.pow(rx, 2)) * ry;
+        SvgLog.i("testX=250,testY=" + testY);
+
+        double x, y;
+        double deltaValue = (x2 - x1) / 180;
+        for (x = x1; x <= x2; x += deltaValue) {
+            y = cy + Math.sqrt(1 - Math.pow(x - cx, 2) / Math.pow(rx, 2)) * ry;
+            path.lineTo((float)x, (float)y);
+        }
+
+        canvas.drawPath(path, paint);
+
+        //经椭圆的两坐标点
+        //椭圆中心点
+        //起点和终点分别与圆心连线和X轴形成的夹角
+        //
+        //椭圆外接矩形长宽（长轴和短轴）
+        //       Rect
+        SvgLog.i("绘制耗时[" + (System.currentTimeMillis() - time) + "]ms.");
     }
 }
