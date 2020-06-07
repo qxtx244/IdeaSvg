@@ -8,6 +8,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.ScaleDrawable;
 import android.graphics.drawable.VectorDrawable;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -107,8 +108,9 @@ public class IdeaSvgView extends View implements ISvgView {
     }
 
     /**
-     * //LYX_TAG 2020/6/3 23:32 可能会出现这样一种情况：两个端点坐标和长短轴值对不上（即计算cxx和cyy时那个平方根里是负数），这时候应该先通过两个坐标点推算出椭圆方程，再计算得到长短轴长度
-     * @param canvas
+     * LYX_TAG 2020/6/3 23:32 可能会出现给定的参数无法得到一个椭圆（计算sqrtValue时会得到Double.NaN），
+     *  如果倾斜度为0，则可以处理，缩放长短轴即可；
+     *  如果存在倾斜度，目前无法知道这个椭圆需要平移或者缩放甚至两者兼有才能符合要求，因此暂时没有办法处理。
      */
     @Override
     protected void onDraw(Canvas canvas) {
@@ -124,14 +126,54 @@ public class IdeaSvgView extends View implements ISvgView {
 
         //圆弧起点坐标x1，y1
         double x1 = 100, y1 = 200;
-        //rx长半轴，ry短半轴
-        double rx= 100, ry = 70;
+        //rxHalf长半轴，ryHalf短半轴
+        double rxHalf = 100, ryHalf = 70;
         //椭圆x轴与画布x轴的夹角（顺时针夹角）
-        double phi = 0;
+        double phi = 45;
         //fa大圆弧1小圆弧0，fs顺时针1逆时针0
         int fA = 0, fS = 0;
         //终点坐标x2，y2
-        double x2 = 250, y2 = 260.6217782649107;
+        double x2 = 300, y2 = 200;
+
+        generateEllipticalArcPath(path, x1, y1, rxHalf, ryHalf, phi, fA, fS, x2, y2);
+
+        canvas.drawPath(path, paint);
+
+        //椭圆外接矩形长宽（长轴和短轴）
+        SvgLog.i("绘制耗时[" + (System.currentTimeMillis() - time) + "]ms.");
+    }
+
+    /**
+     * @param path svg路径对象
+     * @param x1 椭圆弧的起始x坐标
+     * @param y1 椭圆弧的起始y坐标
+     * @param rxHalf 长半轴
+     * @param ryHalf 短半轴
+     * @param phi 椭圆弧所在椭圆的自身x轴与画布x轴的夹角，以顺时针方向
+     * @param fA 1表示使用大角度圆心角对应的椭圆弧，0表示小角度圆心角对应的椭圆弧
+     * @param fS 1表示椭圆弧走向为沿顺时针方向，0为沿逆时针方向
+     * @param x2 椭圆弧的终点x坐标
+     * @param y2 椭圆弧的终点y坐标
+     *
+     * 备注：小数计算会有精度问题，可能导致得到的数值变小了
+     */
+    private void generateEllipticalArcPath(Path path, double x1, double y1,
+                                           double rxHalf, double ryHalf, double phi, double fA, double fS, double x2, double y2) {
+
+        if (rxHalf == ryHalf) {
+            phi = 0;
+        } else {
+            phi %= 360;
+        }
+
+        //对于倾斜度为0的椭圆，如果两点之间的距离s大于长轴，则将长轴增大到s，并且短轴比做等比增大。
+        double dist = Math.abs(x2 - x1);
+        double longAxis = 2 * rxHalf;
+        if (phi == 0 && dist > longAxis) {
+            rxHalf = dist / 2;
+            double zoom = dist / longAxis;
+            ryHalf *= zoom;
+        }
 
         double cosPhi = Math.cos(phi);
         double sinPhi = Math.sin(phi);
@@ -141,11 +183,17 @@ public class IdeaSvgView extends View implements ISvgView {
         double x11 = cosPhi * deltaXHalf + sinPhi * deltaYHalf;
         double y11 = (-sinPhi) * deltaXHalf + cosPhi * deltaYHalf;
 
-        double rxy11Pow2 = Math.pow(rx * y11, 2);
-        double ryx11Pow2 = Math.pow(ry * x11, 2);
-        double sqrtValue = Math.sqrt(Math.abs((Math.pow(rx * ry, 2) - rxy11Pow2 - ryx11Pow2) / (rxy11Pow2 + ryx11Pow2)));
-        double cxx = sqrtValue * rx * y11 / ry;
-        double cyy = sqrtValue * (-ry) * x11 / rx;
+        double rxy11Pow2 = Math.pow(rxHalf * y11, 2);
+        double ryx11Pow2 = Math.pow(ryHalf * x11, 2);
+        double sqrtValue = Math.sqrt(Math.abs((Math.pow(rxHalf * ryHalf, 2) - rxy11Pow2 - ryx11Pow2) / (rxy11Pow2 + ryx11Pow2)));
+        if (Double.isNaN(sqrtValue)) {
+            SvgLog.i("发生异常！无法解析的A锚点");
+            path.lineTo((float)x2, (float)y2);
+            return ;
+        }
+
+        double cxx = sqrtValue * rxHalf * y11 / ryHalf;
+        double cyy = sqrtValue * (-ryHalf) * x11 / rxHalf;
         if (fA == fS) {
             cxx *= -1;
             cyy *= -1;
@@ -155,30 +203,16 @@ public class IdeaSvgView extends View implements ISvgView {
         double cx = cosPhi * cxx - sinPhi * cyy + ((x1 + x2) / 2);
         double cy = sinPhi * cxx + cosPhi * cyy + ((y1 + y2) / 2);
 
-        SvgLog.i("数值：x11,y11=" + x11 + "," + y11 + "  cxx,cyy=" + cxx + "," + cyy + "  cx,xy=" + cx + "," + cy);
-        SvgLog.i("数值：sqrtValue=" + sqrtValue);
+        SvgLog.i("数值：x11,y11=" + x11 + "," + y11 + "  cxx,cyy=" + cxx + "," + cyy + "  cx,xy=" + cx + "," + cy + ", sqrtValue=" + sqrtValue);
 
         //通过x1 —> x2的x坐标值递增，得到对应的y坐标值，逐个lineTo，细粒度为1°
         path.moveTo((float)x1, (float)y1);
 
-        double testY = cy + Math.sqrt(1 - Math.pow(250 - cx, 2) / Math.pow(rx, 2)) * ry;
-        SvgLog.i("testX=250,testY=" + testY);
-
         double x, y;
         double deltaValue = (x2 - x1) / 180;
         for (x = x1; x <= x2; x += deltaValue) {
-            y = cy + Math.sqrt(1 - Math.pow(x - cx, 2) / Math.pow(rx, 2)) * ry;
+            y = cy + Math.sqrt(1 - Math.pow(x - cx, 2) / Math.pow(rxHalf, 2)) * ryHalf;
             path.lineTo((float)x, (float)y);
         }
-
-        canvas.drawPath(path, paint);
-
-        //经椭圆的两坐标点
-        //椭圆中心点
-        //起点和终点分别与圆心连线和X轴形成的夹角
-        //
-        //椭圆外接矩形长宽（长轴和短轴）
-        //       Rect
-        SvgLog.i("绘制耗时[" + (System.currentTimeMillis() - time) + "]ms.");
     }
 }
