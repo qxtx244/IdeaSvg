@@ -97,47 +97,79 @@ public final class PathParam {
             return ;
         }
 
+        float lastX = 0f, lastY = 0f;
         for (String key : pathDataMap.keySet()) {
             List<Float> value = pathDataMap.get(key);
             switch (key.charAt(0)) {
                 case 'M': //2
-
+                    lastX = value.get(0);
+                    lastY = value.get(1);
+                    path.moveTo(lastX, lastY);
                     break;
                 case 'H': //1
+                    lastX = value.get(0);
+                    path.lineTo(lastX, lastY);
                     break;
                 case 'V': //1
+                    lastY = value.get(0);
+                    path.lineTo(lastX, lastY);
                     break;
                 case 'L': //2
+                    lastX = value.get(0);
+                    lastY = value.get(1);
+                    path.lineTo(lastX, lastY);
                     break;
-                case 'T': //2
+                case 'T': //2，T前面必须是Q或者T锚点，否则将得到一条直线
                     break;
-                case 'S': //4
+                case 'S': //4，S前面必须是C或S锚点，否则两个控制点将是同一个
                     break;
                 case 'Q': //4
+                    lastX = value.get(2);
+                    lastY = value.get(3);
+                    path.quadTo(value.get(0), value.get(1), lastX, lastY);
                     break;
                 case 'C': //6
+                    lastX = value.get(4);
+                    lastY = value.get(5);
+                    path.cubicTo(value.get(0), value.get(1), value.get(2), value.get(3), lastX, lastY);
                     break;
                 case 'A': //7
                     break;
                 case 'Z':
-
                 case 'z':
+                    path.close();
                     break;
                 case 'm': //2
+                    lastX += value.get(0);
+                    lastY += value.get(1);
+                    path.moveTo(lastX, lastY);
                     break;
                 case 'h': //1
+                    lastX += value.get(0);
+                    path.lineTo(lastX, lastY);
                     break;
                 case 'v': //1
+                    lastY += value.get(0);
+                    path.lineTo(lastX, lastY);
                     break;
                 case 'l': //2
+                    lastX += value.get(0);
+                    lastY += value.get(1);
+                    path.lineTo(lastX, lastY);
                     break;
                 case 't': //2
                     break;
                 case 's': //4
                     break;
                 case 'q': //4
+                    lastX += value.get(2);
+                    lastY += value.get(3);
+                    path.rQuadTo(value.get(0), value.get(1), value.get(2), value.get(3));
                     break;
                 case 'c': //6
+                    lastX += value.get(4);
+                    lastY += value.get(5);
+                    path.rCubicTo(value.get(0), value.get(1), value.get(2), value.get(3), value.get(4), value.get(5));
                     break;
                 case 'a': //7
                     break;
