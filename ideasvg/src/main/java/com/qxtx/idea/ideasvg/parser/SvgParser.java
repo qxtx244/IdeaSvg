@@ -1,21 +1,27 @@
 package com.qxtx.idea.ideasvg.parser;
 
+import android.content.ContentResolver;
+import android.content.Context;
 import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
 import android.graphics.Color;
 import android.graphics.Path;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
+import android.view.ViewGroup;
 
+import com.lolaage.common.util.ScreenSizeUtil;
 import com.qxtx.idea.ideasvg.entity.PathParam;
 import com.qxtx.idea.ideasvg.entity.SvgParam;
 import com.qxtx.idea.ideasvg.tools.SvgLog;
 
 import org.xmlpull.v1.XmlPullParser;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.WeakHashMap;
 
 /**
  * CreateDate 2020/5/20 23:48
@@ -25,6 +31,13 @@ import java.util.List;
  * Description: svg控件的辅助解析类，负责解析xml，.svg文件等工作
  */
 public final class SvgParser implements IParser {
+
+    /** Application cotext */
+    private final Context mContext;
+
+    public SvgParser(@NonNull Context context) {
+        mContext = context.getApplicationContext();
+    }
 
     /**
      * 解析xml中的vector标签数据
@@ -62,37 +75,42 @@ public final class SvgParser implements IParser {
             return ;
         }
 
-        //读取根标签的属性
+        //解析根标签属性
         String value;
-        int viewportSpec;
         float svgAlpha = 1f;
         attrCount = xmlParser.getAttributeCount();
         for (int i = 0; i < attrCount; i++) {
             String name = xmlParser.getAttributeName(i);
             switch (name) {
                 case "width":
-                    //dimen类型数值字符串
+                    //dimen类型数值字符串，如果当前svg的尺寸仍未被确定，则转换成px后使用
                     value = xmlParser.getAttributeValue(i);
-                    if (!TextUtils.isEmpty(value)) {
-                        param.setWidth(value);
+                    if (TextUtils.isEmpty(value)) {
+                        break;
+                    }
+                    float width = param.getWidth();
+                    if (width == 0 || width == ViewGroup.LayoutParams.WRAP_CONTENT) {
+                        param.setWidth(parseDimenToPx(value, width));
                     }
                     break;
                 case "height":
-                    //dimen类型数值字符串
+                    //dimen类型数值字符串，如果当前svg的尺寸仍未被确定，则转换成px后使用
                     value = xmlParser.getAttributeValue(i);
-                    if (!TextUtils.isEmpty(value)) {
-                        param.setHeight(value);
+                    if (TextUtils.isEmpty(value)) {
+                        break;
+                    }
+                    float height = param.getHeight();
+                    if (height == 0 || height == ViewGroup.LayoutParams.WRAP_CONTENT) {
+                        param.setWidth(parseDimenToPx(value, height));
                     }
                     break;
                 case "viewportWidth":
-                    //解析可能得到小数或者整数
-                    value = xmlParser.getAttributeValue(i);
-                    param.setViewportWidth(Float.parseFloat(value));
+                    //解析可能得到小数或者整数，但肯定是数值
+                    param.setViewportWidth(xmlParser.getAttributeFloatValue(i, 0));
                     break;
                 case "viewportHeight":
-                    //解析可能得到小数或者整数
-                    value = xmlParser.getAttributeValue(i);
-                    param.setViewportHeight(Float.parseFloat(value));
+                    //解析可能得到小数或者整数，但肯定是数值
+                    param.setViewportHeight(xmlParser.getAttributeFloatValue(i, 0));
                     break;
                 case "alpha":
                     svgAlpha = xmlParser.getAttributeFloatValue(i, 1f);
@@ -120,6 +138,8 @@ public final class SvgParser implements IParser {
             }
         }
 
+        List<PathParam> pathParamList = param.getPathParamList();
+        //解析子标签
         int eventType;
         while ((eventType = xmlParser.next()) != XmlPullParser.END_DOCUMENT) {
             if (eventType != XmlPullParser.START_TAG) {
@@ -127,21 +147,17 @@ public final class SvgParser implements IParser {
             }
 
             tag = xmlParser.getName();
+            //只解析path标签
             if (TextUtils.isEmpty(tag) || !tag.equals("path")) {
                 continue;
             }
 
-            List<PathParam> pathParamList = param.getPathParamList();
             PathParam pathParam = new PathParam();
-            pathParamList.add(pathParam);
-
             attrCount = xmlParser.getAttributeCount();
             for (int i = 0; i < attrCount; i++) {
-                String name = xmlParser.getAttributeName(i);
-                switch (name) {
+                switch (xmlParser.getAttributeName(i)) {
                     case "pathData":
-                        String pathData = xmlParser.getAttributeValue(i);
-                        pathParam.setPathData(pathData);
+                        pathParam.parsePathData(xmlParser.getAttributeValue(i));
                         break;
                     case "strokeWidth":
                         pathParam.setStrokeWidth(xmlParser.getAttributeFloatValue(i, pathParam.getStrokeWidth()));
@@ -154,13 +170,13 @@ public final class SvgParser implements IParser {
                         float strokeAlpha = xmlParser.getAttributeFloatValue(i, pathParam.getStrokeAlpha());
                         pathParam.setStrokeAlpha(strokeAlpha * svgAlpha);
                         break;
-                    case "fillColor":
-                        pathParam.setFillColor(xmlParser.getAttributeIntValue(i, pathParam.getFillColor()));
-                        break;
                     case "fillAlpha":
                         //需要与全局透明度叠加
                         float fillAlpha = xmlParser.getAttributeFloatValue(i, pathParam.getFillAlpha());
                         pathParam.setFillAlpha(fillAlpha * svgAlpha);
+                        break;
+                    case "fillColor":
+                        pathParam.setFillColor(xmlParser.getAttributeIntValue(i, pathParam.getFillColor()));
                         break;
                     case "name":
                         pathParam.setName(xmlParser.getAttributeValue(i));
@@ -185,6 +201,7 @@ public final class SvgParser implements IParser {
                         break;
                 }
             }
+            pathParamList.add(pathParam);
         }
     }
 
@@ -443,5 +460,29 @@ public final class SvgParser implements IParser {
      */
     private static void addSubPath(@NonNull LinkedHashMap<String, List<Float>> map, char anchor, List<Float> values) {
         map.put(anchor + "" + map.size(), values);
+    }
+
+    /**
+     * 将xml中的dimen值转换成px
+     * @param dimen 带dimen单位的数值字符串
+     * @param defValue 默认数值
+     * @return
+     */
+    //LYX_TAG 2020/9/17 22:33 这里需要换成float类型去转换
+    private float parseDimenToPx(String dimen, float defValue) {
+        float result = defValue;
+        int len = dimen.length();
+        float v;
+        if (dimen.endsWith("dip")) {
+            v = Float.parseFloat(dimen.substring(0, len - 4));
+            result = ScreenSizeUtil.dp2Px(mContext, (int)v);
+        } else if (dimen.endsWith("dp")) {
+            v = Float.parseFloat(dimen.substring(0, len - 3));
+            result = ScreenSizeUtil.dp2Px(mContext, (int)v);
+        } else if (dimen.endsWith("px")) {
+            v = Float.parseFloat(dimen.substring(0, len - 3));
+            result = v;
+        }
+        return Math.max(0, result);
     }
 }

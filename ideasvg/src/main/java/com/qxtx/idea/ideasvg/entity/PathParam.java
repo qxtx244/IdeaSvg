@@ -85,7 +85,7 @@ public final class PathParam {
             //一旦pathDataMap有变动，path将会被同步更新
             generatePath();
         } catch (Exception e) {
-            SvgLog.i("异常！" + e);
+            SvgLog.i("解析pathData发生异常！" + e);
             e.printStackTrace();
         }
     }
@@ -190,7 +190,7 @@ public final class PathParam {
     }
 
     /** 一旦更新这个变量，则与其对应的{@link #pathDataMap}也将会被立即更新 */
-    public void setPathData(String pathData) {
+    public void parsePathData(String pathData) {
         this.pathData = pathData;
         generatePathDataMap();
     }

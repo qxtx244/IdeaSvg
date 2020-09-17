@@ -56,7 +56,7 @@ public class IdeaSvgView extends View implements ISvgView {
 
         mExtraPaint = new Paint();
         mSvgParam = new SvgParam();
-        mSvgParser = new SvgParser();
+        mSvgParser = new SvgParser(getContext());
 
         long durationMs = System.currentTimeMillis();
 
@@ -66,8 +66,8 @@ public class IdeaSvgView extends View implements ISvgView {
             //xml中配置svg图形宽高
             //未定义svg宽高，则使用原始数据
             //LYX_TAG 2020/9/14 22:58 这个得到px还是dp数值？
-            mSvgParam.setWidth(a.getDimension(R.styleable.IdeaSvgView_svgWidth, ViewGroup.LayoutParams.WRAP_CONTENT));
-            mSvgParam.setHeight(a.getDimension(R.styleable.IdeaSvgView_svgHeight, ViewGroup.LayoutParams.WRAP_CONTENT));
+            mSvgParam.setWidth(a.getDimension(R.styleable.IdeaSvgView_svgWidth, 0));
+            mSvgParam.setHeight(a.getDimension(R.styleable.IdeaSvgView_svgHeight, 0));
 
             mSvgParam.setAlpha(a.getFloat(R.styleable.IdeaSvgView_svgAlpha, 1f));
 
