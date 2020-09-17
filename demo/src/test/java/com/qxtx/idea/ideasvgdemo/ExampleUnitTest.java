@@ -18,19 +18,9 @@ import static org.junit.Assert.*;
 public class ExampleUnitTest {
     @Test
     public void addition_isCorrect() throws IOException {
-        ArrayList<String> list = new ArrayList<>();
-        for (int i = 0; i < 10000; i++) {
-            list.add("abcdefghijklmnopqrstuvwxyzsdjfkdslfjionklnvsdkflgjwiroghklsdn" + i);
-        }
-        long durationMs = System.currentTimeMillis();
-        File file = new File("W:\\QXTX-File\\ideaSvg.xml");
-        try (FileWriter fw = new FileWriter(file, true)) {
-            for (int i = 0; i < list.size(); i++) {
-                fw.write(list.get(i) + "\n");
-            }
-            fw.flush();
-        }
+        String s = "1";
 
-        System.out.println("耗时：" + (System.currentTimeMillis() - durationMs) + "ms.");
+        double num = Double.parseDouble(s);
+        System.out.println("num=" + num);
     }
 }

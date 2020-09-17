@@ -1,0 +1,21 @@
+/**
+ * Create date 2020/4/8 09:51:43<p>
+ * @author QXTX-WORK
+ * <p>
+ * Description gradle的一些通用性api或变量。
+ * <em>引入</em>：在需要使用这些api的module的build.gradle中使用apply from: 'tools.gradle的路径/tools.gradle'
+ * <em>调用</em>：直接使用ext闭包中的变量
+ */
+
+//获取所有带“Test”或“Debug”字样的task
+def getDebugTaskList() {
+    project.tasks.findAll { it ->
+        it.name.contains("Debug") or it.name.contains("Test")
+    }
+}
+
+ext {
+    /** 获取所有带test关键字的task */
+    debugTaskList = getDebugTaskList()
+}
+

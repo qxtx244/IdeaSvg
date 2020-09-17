@@ -1,10 +1,5 @@
 package com.qxtx.idea.ideasvg.parser;
 
-import android.support.annotation.IntDef;
-
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-
 /**
  * @author QXTX-WIN
  * @date 2019/12/11 23:33

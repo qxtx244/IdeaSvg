@@ -11,6 +11,11 @@
         <!-- 控件高 -->
         <attr name="android:layout_height"/>
 
+        <!-- svg宽 -->
+        <attr name="svgWidth" format="integer"/>
+        <!-- svg高 -->
+        <attr name="svgHeight" format="integer"/>
+
         <!-- svg图形数据，引用vector xml -->
         <attr name="svgSrc" format="reference"/>
         <!-- svg的透明度，当定义了此属性，则svgSrc中定义的alpha值将会被忽略 -->

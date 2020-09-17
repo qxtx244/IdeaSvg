@@ -7,7 +7,7 @@ android {
     defaultConfig {
         minSdkVersion minSdkVer
         targetSdkVersion targetSdkVer
-        versionCode 1
+        versionCode 3
         versionName "3.0.0"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
@@ -22,8 +22,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility javaVer
-        targetCompatibility javaVer
+        sourceCompatibility jdkVer
+        targetCompatibility jdkVer
     }
 }
 
@@ -31,7 +31,7 @@ dependencies {
 
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
-    implementation lib_support_v7
+    implementation appCompat_v7
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'

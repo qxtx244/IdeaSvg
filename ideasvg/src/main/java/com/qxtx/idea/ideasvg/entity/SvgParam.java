@@ -1,16 +1,11 @@
 package com.qxtx.idea.ideasvg.entity;
 
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.Path;
-import android.os.Build;
 import android.support.annotation.IdRes;
 import android.support.annotation.IntDef;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 
 /**
@@ -23,7 +18,8 @@ import java.util.List;
  *          这意味着path数值需要做对应的缩放，才能得到svg最终在实际画布中展示的尺寸。
  *          path数值从参考画布转换到此实际画布尺寸计算方法：比如实际画布大小w:100 h:100，参考画布大小w:500 h:300，
  *          则取宽高差值较大者，则path数值的缩放比率为：zoom = (500-100) / 500 = 0.8，path中的所有数值乘以这个比率。
- * [viewportSpec] 参考画布宽高值。可以看做是给path提供一个虚拟尺寸的画布，与最终svg的尺寸单位、尺寸大小无关
+ * [viewportWidth] 参考画布宽。只为path提供尺寸参考，与最终svg的尺寸单位、尺寸大小无关
+ * [viewportHeight] 参考画布高。只为path提供尺寸参考，与最终svg的尺寸单位、尺寸大小无关
  * [alpha] 全局透明度。如果path标签中也存在alpha属性，则与此全局透明度叠加得到最终alpha值
  * [pathParamList] 子path数据列表
  * [tint] 全局着色
@@ -34,34 +30,38 @@ import java.util.List;
 public class SvgParam {
 
     /**
-     * svg的实际宽度
-     * 如果此宽高数据任一为0，则强制使用虚拟画布宽度
-     * 注意，此宽数据仅仅是定义了svg在实际画布下的尺寸，与路径数值无关，而{@link #viewportSpec}则给路径提供了一个参考画布尺寸。
+     * svg的实际宽度，dimen数值
+     * 注意，此宽数据仅仅是定义了svg在实际画布下的尺寸，与路径数值无关
      * 此宽高值通过vector根标签中的width属性得到
      */
-    private int width;
+    private float width;
 
     /**
-     * svg的实际高度
-     * 如果为0，则强制使用虚拟画布高度
-     * 注意，此宽数据仅仅是定义了svg在实际画布下的尺寸，与路径数值无关，而{@link #viewportSpec}则给路径提供了一个参考画布尺寸。
+     * svg的实际高度，dimen数值
+     * 注意，此宽数据仅仅是定义了svg在实际画布下的尺寸，与路径数值无关
      * 此值通过vector根标签中的height属性得到
      */
-    private int height;
+    private float height;
 
     /**
-     * svg路径参考的尺寸，高16位是宽，低16位是高，大端序
+     * svg路径参考宽
      * 注意，此宽高数据作为路径的参考画布宽高，与svg的实际尺寸无关，而{@link #width}和{@link #height}则描述了svg在实际画布中的尺寸。
      * 简单地说，前者仅仅是为了给路径提供一个参考画布尺寸，后者定义了这个图形在真实画布中的尺寸
      * 可以通过svg实际宽高和此宽高数据的比值，计算出路径在实际画布尺寸下的数值，然后在view中绘制出真实尺寸的svg。
-     *
-     * 宽度：int width = (pathSpec >> 16) & 0xffff
-     * 高度：int height = pathSpec & 0xffff
-     *
      * 在vector xml资源中，此宽高值通过vector根标签中的viewportWidth，viewportHeight属性取到
      * 在.svg文件中，存在一个viewBox属性，包含有viewportWidth,viewportHeight
      */
-    private int viewportSpec;
+    private float viewportWidth;
+
+    /**
+     * svg路径参考高
+     * 注意，此宽高数据作为路径的参考画布宽高，与svg的实际尺寸无关，而{@link #width}和{@link #height}则描述了svg在实际画布中的尺寸。
+     * 简单地说，前者仅仅是为了给路径提供一个参考画布尺寸，后者定义了这个图形在真实画布中的尺寸
+     * 可以通过svg实际宽高和此宽高数据的比值，计算出路径在实际画布尺寸下的数值，然后在view中绘制出真实尺寸的svg。
+     * 在vector xml资源中，此宽高值通过vector根标签中的viewportWidth，viewportHeight属性取到
+     * 在.svg文件中，存在一个viewBox属性，包含有viewportWidth,viewportHeight
+     */
+    private float viewportHeight;
 
     /** 原点X坐标偏移值，默认为0。AS在导入.svg为xml资源时，已经自动将这个偏移值应用到了path数值中 */
     private int offsetX;
@@ -109,9 +109,10 @@ public class SvgParam {
     }
 
     public void reset() {
-        width = 0;
-        height = 0;
-        viewportSpec = 0;
+        width = 0f;
+        height = 0f;
+        viewportWidth = 0f;
+        viewportHeight = 0f;
         offsetX = 0;
         offsetY = 0;
         alpha = 1f;
@@ -123,28 +124,34 @@ public class SvgParam {
         autoMirrored = false;
     }
 
-    public int getWidth() {
+    public float getWidth() {
         return width;
     }
-
-    public void setWidth(int width) {
+    public void setWidth(float width) {
         this.width = width;
     }
 
-    public int getHeight() {
+    public float getHeight() {
         return height;
     }
-
-    public void setHeight(int height) {
+    public void setHeight(float height) {
         this.height = height;
     }
 
-    public int getViewportSpec() {
-        return viewportSpec;
+    public float getViewportWidth() {
+        return viewportWidth;
     }
 
-    public void setViewportSpec(int viewportSpec) {
-        this.viewportSpec = viewportSpec;
+    public void setViewportWidth(float viewportWidth) {
+        this.viewportWidth = viewportWidth;
+    }
+
+    public float getViewportHeight() {
+        return viewportHeight;
+    }
+
+    public void setViewportHeight(float viewportHeight) {
+        this.viewportHeight = viewportHeight;
     }
 
     public int getOffsetX() {
@@ -227,7 +234,8 @@ public class SvgParam {
         return "SvgParam{" +
                 "width=" + width +
                 ", height=" + height +
-                ", viewportSpec=" + viewportSpec +
+                ", viewportWidth=" + viewportWidth +
+                ", viewportHeight=" + viewportHeight +
                 ", offsetX=" + offsetX +
                 ", offsetY=" + offsetY +
                 ", alpha=" + alpha +

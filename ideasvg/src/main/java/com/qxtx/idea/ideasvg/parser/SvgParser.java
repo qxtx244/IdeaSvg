@@ -3,6 +3,7 @@ package com.qxtx.idea.ideasvg.parser;
 import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
 import android.graphics.Color;
+import android.graphics.Path;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
 
@@ -15,28 +16,22 @@ import org.xmlpull.v1.XmlPullParser;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 /**
  * CreateDate 2020/5/20 23:48
  * <p>
  *
  * @author QXTX-WIN
- * Description: svg控件的辅助解析类，负责为svg控件解析xml，.svg等工作
+ * Description: svg控件的辅助解析类，负责解析xml，.svg文件等工作
  */
 public final class SvgParser implements IParser {
-
-    /** 可复用的字符串组装对象 */
-    private static final StringBuilder sb = new StringBuilder();
-
-    public SvgParser() { }
 
     /**
      * 解析xml中的vector标签数据
      * @param xmlParser 目标xml的解析对象，能方便地获取到xml中的数据
      * @param param svg的配置参数集，解析到的数据保存到此对象中
      */
-    public void parseVectorXml(@NonNull Resources resources,  @NonNull XmlResourceParser xmlParser, @NonNull SvgParam param) throws Exception {
+    public void parseVectorXml(@NonNull Resources resources, @NonNull XmlResourceParser xmlParser, @NonNull SvgParam param) throws Exception {
         //先清空原有的数据
         param.reset();
 
@@ -76,46 +71,28 @@ public final class SvgParser implements IParser {
             String name = xmlParser.getAttributeName(i);
             switch (name) {
                 case "width":
-                    //解析得到"xxxx.0dip",需要去掉后面的.0dip字符串，读出实际int数值
+                    //dimen类型数值字符串
                     value = xmlParser.getAttributeValue(i);
-                    if (TextUtils.isEmpty(value)) {
-                        param.setWidth(0);
-                    } else {
-                        int width = Integer.parseInt(value.substring(0, value.length() - 5));
-                        param.setWidth(width);
+                    if (!TextUtils.isEmpty(value)) {
+                        param.setWidth(value);
                     }
                     break;
                 case "height":
-                    //解析得到"xxxx.0dip",需要去掉后面的.0dip字符串，读出实际整数值
+                    //dimen类型数值字符串
                     value = xmlParser.getAttributeValue(i);
-                    if (TextUtils.isEmpty(value)) {
-                        param.setHeight(0);
-                    } else {
-                        int height = Integer.parseInt(value.substring(0, value.length() - 5));
-                        param.setHeight(height);
+                    if (!TextUtils.isEmpty(value)) {
+                        param.setHeight(value);
                     }
                     break;
                 case "viewportWidth":
-                    //解析得到"xxxx.0",需要去掉后面的.0字符串，读出实际整数值
+                    //解析可能得到小数或者整数
                     value = xmlParser.getAttributeValue(i);
-                    int viewportWidth = Integer.parseInt(value.substring(0, value.length() - 2));
-                    viewportSpec = param.getViewportSpec() | ((viewportWidth << 16) & 0xffff0000);
-                    param.setViewportSpec(viewportSpec);
-
-                    if (param.getWidth() == 0) {
-                        param.setWidth(viewportWidth);
-                    }
+                    param.setViewportWidth(Float.parseFloat(value));
                     break;
                 case "viewportHeight":
-                    //解析得到"xxxx.0",需要去掉后面的.0字符串，读出实际整数值
+                    //解析可能得到小数或者整数
                     value = xmlParser.getAttributeValue(i);
-                    int viewportHeight = Integer.parseInt(value.substring(0, value.length() - 2));
-                    viewportSpec = param.getViewportSpec() | (viewportHeight & 0xffff);
-                    param.setViewportSpec(viewportSpec);
-
-                    if (param.getHeight() == 0) {
-                        param.setHeight(viewportHeight);
-                    }
+                    param.setViewportHeight(Float.parseFloat(value));
                     break;
                 case "alpha":
                     svgAlpha = xmlParser.getAttributeFloatValue(i, 1f);
@@ -212,7 +189,7 @@ public final class SvgParser implements IParser {
     }
 
     /**
-     * 解析path字符串，得到path数据集，以生成path对象
+     * 解析path字符串，得到path数据集，为接下来生成Path对象提供路径数据集
      * 遍历pathData，每一次循环，得到一条子路径（包含一个锚点符）；
      * 1、寻找起始的锚点符M
      */
@@ -239,6 +216,8 @@ public final class SvgParser implements IParser {
                 pos = 0;
             }
         }
+
+        StringBuilder sb = new StringBuilder();
 
         //循环会从一个[M]或[m]开始
         //每次循环都会获取到一个子路径数据（也可能具有连续相同锚点符的多条子路径数据拼接）完整数据
@@ -282,7 +261,7 @@ public final class SvgParser implements IParser {
                 if (CharUtil.isAnchor(ch)) {
                     //碰到锚点符，本次子路径数据已全部获取到，完成循环
                     if (sb.length() > 0) {
-                        if (!addValue(valueList)) {
+                        if (!addValue(valueList, sb.toString())) {
                             return null;
                         }
                     }
@@ -292,7 +271,7 @@ public final class SvgParser implements IParser {
                     //如果碰到的是[,]或[ ]，①说明一个数值的数据获取完成，并且跳过之后连续的[,]或[ ]
                     //如果碰到的是[-]或[.]，如果前面已经保存过一次此类符号，说明当前子符为分隔符而不是数值字符，否则为数值字符
                     if (ch == ',' || ch == ' ') {
-                        if (!addValue(valueList)) {
+                        if (!addValue(valueList, sb.toString())) {
                             return null;
                         }
 
@@ -315,7 +294,7 @@ public final class SvgParser implements IParser {
                         //碰到的是[-]或[.]
                         if (isNextValueChar) {
                             //碰到了下一个数值的字符，立即完成当前字符的保存
-                            if (!addValue(valueList)) {
+                            if (!addValue(valueList, sb.toString())) {
                                 return null;
                             }
 
@@ -343,9 +322,83 @@ public final class SvgParser implements IParser {
         return resultMap;
     }
 
+    /**
+     * 生成椭圆弧路径，目前只能解析合法的数值，没有自动数值修正
+     * @param path svg路径对象
+     * @param x1 椭圆弧的起始x坐标
+     * @param y1 椭圆弧的起始y坐标
+     * @param rxHalf 长半轴
+     * @param ryHalf 短半轴
+     * @param phi 椭圆弧所在椭圆的自身x轴与画布x轴的夹角，以顺时针方向
+     * @param fA 1表示使用大角度圆心角对应的椭圆弧，0表示小角度圆心角对应的椭圆弧
+     * @param fS 1表示椭圆弧走向为沿顺时针方向，0为沿逆时针方向
+     * @param x2 椭圆弧的终点x坐标
+     * @param y2 椭圆弧的终点y坐标
+     *
+     * 备注：小数计算会有精度问题，可能导致得到的数值变小了
+     *       目前可能无法正确解析错误的椭圆弧线数据
+     */
+    public void generateEllipticalArcPath(@NonNull Path path, double x1, double y1,
+                                          double rxHalf, double ryHalf, double phi, double fA, double fS, double x2, double y2) {
+
+        if (rxHalf == ryHalf) {
+            phi = 0;
+        } else {
+            phi %= 360;
+        }
+
+        //对于倾斜度为0的椭圆，如果两点之间的距离s大于长轴，则将长轴增大到s，并且短轴比做等比增大。
+        double dist = Math.abs(x2 - x1);
+        double longAxis = 2 * rxHalf;
+        if (phi == 0 && dist > longAxis) {
+            rxHalf = dist / 2;
+            double zoom = dist / longAxis;
+            ryHalf *= zoom;
+        }
+
+        double cosPhi = Math.cos(phi);
+        double sinPhi = Math.sin(phi);
+
+        double deltaXHalf = (x1 - x2) / 2;
+        double deltaYHalf = (y1 - y2) / 2;
+        double x11 = cosPhi * deltaXHalf + sinPhi * deltaYHalf;
+        double y11 = (-sinPhi) * deltaXHalf + cosPhi * deltaYHalf;
+
+        double rxy11Pow2 = Math.pow(rxHalf * y11, 2);
+        double ryx11Pow2 = Math.pow(ryHalf * x11, 2);
+        double sqrtValue = Math.sqrt(Math.abs((Math.pow(rxHalf * ryHalf, 2) - rxy11Pow2 - ryx11Pow2) / (rxy11Pow2 + ryx11Pow2)));
+        if (Double.isNaN(sqrtValue)) {
+            SvgLog.e("发生异常！无法解析的椭圆弧路径");
+            path.lineTo((float)x2, (float)y2);
+            return ;
+        }
+
+        double cxx = sqrtValue * rxHalf * y11 / ryHalf;
+        double cyy = sqrtValue * (-ryHalf) * x11 / rxHalf;
+        if (fA == fS) {
+            cxx *= -1;
+            cyy *= -1;
+        }
+
+        //得到中心坐标
+        double cx = cosPhi * cxx - sinPhi * cyy + ((x1 + x2) / 2);
+        double cy = sinPhi * cxx + cosPhi * cyy + ((y1 + y2) / 2);
+
+        SvgLog.i("数值：x11,y11=" + x11 + "," + y11 + "  cxx,cyy=" + cxx + "," + cyy + "  cx,xy=" + cx + "," + cy + ", sqrtValue=" + sqrtValue);
+
+        //通过x1 —> x2的x坐标值递增，得到对应的y坐标值，逐个lineTo，细粒度为1°
+        path.moveTo((float)x1, (float)y1);
+
+        double x, y;
+        double deltaValue = (x2 - x1) / 180;
+        for (x = x1; x <= x2; x += deltaValue) {
+            y = cy + Math.sqrt(1 - Math.pow(x - cx, 2) / Math.pow(rxHalf, 2)) * ryHalf;
+            path.lineTo((float)x, (float)y);
+        }
+    }
+
     /** 添加一个数值到数值列表 */
-    private static boolean addValue(List<Float> list) {
-        String value = sb.toString();
+    private static boolean addValue(List<Float> list, String value) {
         SvgLog.i("得到一个数值：" + value);
         try {
             list.add(Float.parseFloat(value));
@@ -382,6 +435,12 @@ public final class SvgParser implements IParser {
         return pos;
     }
 
+    /**
+     * 添加一条子路径到路径数据集
+     * @param map 路径集
+     * @param anchor 锚点符
+     * @param values 路径数值列表
+     */
     private static void addSubPath(@NonNull LinkedHashMap<String, List<Float>> map, char anchor, List<Float> values) {
         map.put(anchor + "" + map.size(), values);
     }

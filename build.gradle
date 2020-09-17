@@ -5,7 +5,6 @@ buildscript {
         google()
         mavenCentral()
         jcenter()
-        
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:3.5.0'
@@ -20,7 +19,6 @@ allprojects {
         google()
         mavenCentral()
         jcenter()
-        
     }
 }
 
@@ -30,4 +28,22 @@ task clean(type: Delete) {
 
 subprojects {
     apply from: '../constants.gradle'
+}
+
+//遍历子project，应用闭包内条件
+subprojects {
+    def rootConstantsUrl = project.rootDir.path + "\\constants.gradle"
+    if (new File(rootConstantsUrl).exists()) {
+        apply from: rootConstantsUrl
+    }
+
+    def projectConstantsUrl = project.projectDir.path + "\\constants.gradle"
+    if (new File(projectConstantsUrl).exists()) {
+        apply from: projectConstantsUrl
+    }
+
+    def rootToolsUrl = project.rootDir.path + "\\tools.gradle"
+    if (new File(rootToolsUrl).exists()) {
+        apply from: rootToolsUrl
+    }
 }

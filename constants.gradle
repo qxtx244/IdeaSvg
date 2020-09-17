@@ -1,15 +1,26 @@
+/**
+ * 所有子项目的通用配置
+ */
+
 ext {
-    javaVer = JavaVersion.VERSION_1_8
-
-    minSdkVer = 21
-    compileSdkVer = 26
-    targetSdkVer = 21
-    buildToolsVer = '26.0.2'
-
-    appcompat_v7 = '26.0.2'
+    jdkVer = JavaVersion.VERSION_1_8
 
     appVersionCode = 1
     appVersionName = '1.0.0'
 
-    lib_support_v7 = "com.android.support:appcompat-v7:$appcompat_v7"
+    minSdkVer = 23
+    compileSdkVer = 28
+    targetSdkVer = 23
+    buildToolsVer = '28.0.0'
+
+    appCompat_v7 = 'com.android.support:appcompat-v7:' + buildToolsVer
+    appCompat_x = 'androidx.appcompat:appcompat:1.1.0'
+
+    multidex = 'com.android.support:multidex:1.0.2'
+    multidex_x = 'androidx.multidex:multidex:2.0.0'
+
+    daoPluginVer = '3.2.2'
+    daoSchemaVer = 2
+    daoGenDir = 'src/main/java'
+    daoPackageUri = '.database.autogenerate'
 }
