@@ -9,6 +9,12 @@ package com.qxtx.idea.ideasvg.parser;
  */
 final class CharUtil {
 
+    /** 是否为起始锚点符 */
+    static boolean isStartAnchor(char ch) {
+        return ch == SvgConsts.SVG_START_CHAR_UPPER || ch == (SvgConsts.SVG_START_CHAR_UPPER + 32);
+    }
+
+
     static boolean maybeValueDelimiter(char ch) {
         return SvgConsts.VALUE_DELIMITER_UPPER.indexOf(toUpper(ch)) != -1;
     }
