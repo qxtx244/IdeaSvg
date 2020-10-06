@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="1024dp" android:height="1024dp"
+    android:viewportHeight="1024" android:viewportWidth="1024"
+    android:alpha="1f"
+    android:name="测试xml"
+    android:tint="@null"
+    android:tintMode="multiply"
+    android:autoMirrored="false">
+    <path
+        android:strokeColor="#97DCFF"
+        android:strokeWidth="5"
+        android:pathData="M0 0 T180 150 T220 30 T20 340"
+        android:fillColor="#000000" />
+<!--        android:pathData="M10 80 Q 10 80 180 150 Q 350 220 220 30 Q 90 -160 20 340"/>-->
+    <clip-path >
+        元素节点
+    </clip-path>
+
+    <group>
+
+    </group>
+</vector>

@@ -27,7 +27,7 @@ public final class SvgConsts {
     public static final char SVG_CLOSED_ANCHOR = 'Z';
 
     /**
-     * 包含了所有在svg中能被正确解析的锚点符。
+     * 包含了所有在svg中能被正确解析的指令符。
      * All the valid anchor-character in this for svg.
      *  H = horizontal lineTo(x)
      *  V = vertical lineto(y)

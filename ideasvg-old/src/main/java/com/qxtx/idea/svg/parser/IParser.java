@@ -10,7 +10,7 @@ import java.util.LinkedHashMap;
 public interface IParser {
 
     /**
-     * 解析字符串，得到一个可以被使用的数据对集合，里面包含了 锚点符-值数组 形式的键值对。
+     * 解析字符串，得到一个可以被使用的数据对集合，里面包含了 指令符-值数组 形式的键值对。
      * 如果解析失败，将会返回null。
      *
      * @param svgData 待解析的字符串

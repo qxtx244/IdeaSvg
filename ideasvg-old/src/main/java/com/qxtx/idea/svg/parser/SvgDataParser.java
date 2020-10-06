@@ -18,16 +18,16 @@ import java.util.LinkedHashMap;
  * @date 2019/12/3 18:54
  *
  * Description:解析Svg数据。
- *  SVG锚点符：M L Q C H V S T Z A (其实A和L一样的效果)
+ *  SVG指令符：M L Q C H V S T Z A (其实A和L一样的效果)
  *
  *  SVG字符串的使用规则：
- *      ！ 一个锚点符和它的数据集构成一个线段，以下称为[一段路径]；
- *      ！ 路径闭合锚点符[Z/z]称为[闭合符]；
+ *      ！ 一个指令符和它的数据集构成一个线段，以下称为[一段路径]；
+ *      ！ 路径闭合指令符[Z/z]称为[闭合符]；
  *      1、数值之间使用[空格]/[,]作为分隔符隔开；
- *      2、必须以锚点符[M/m]开头，代表起点；
- *      3、以锚点符[Z/z]结尾，代表闭合路径；没有Z/z结尾，代表非闭合路径；
- *      4、一段路径结束后，可以不加分隔符，直接跟上下一段路径的锚点符或者闭合符，如"L10,10z"，"L10,10L20,20"；
- *      5、html中好像有连续相同的锚点符可以只保留第一个，中间的可以省去；
+ *      2、必须以指令符[M/m]开头，代表起点；
+ *      3、以指令符[Z/z]结尾，代表闭合路径；没有Z/z结尾，代表非闭合路径；
+ *      4、一段路径结束后，可以不加分隔符，直接跟上下一段路径的指令符或者闭合符，如"L10,10z"，"L10,10L20,20"；
+ *      5、html中好像有连续相同的指令符可以只保留第一个，中间的可以省去；
  *
  *  示例：
  *      1、"M0 0 L50 0 L50 10 L0 10,z M0 20 L50 20 L50,30 L0 30 Z"
@@ -45,7 +45,7 @@ public class SvgDataParser implements IParser {
     private final float INVALID_VALUE = Float.MIN_VALUE;
 
     /**
-     * 对应{@link SvgConsts#SVG_ANCHOR_ALL}的锚点符的值个数
+     * 对应{@link SvgConsts#SVG_ANCHOR_ALL}的指令符的值个数
      */
     private int[] ANCHOR_VALUE_NUM = new int[] {1, 1, 1, 1, 2, 2, 2, 2, 0, 0, 4, 4, 4, 4, 6, 6, 6, 6, 6, 6};
 
@@ -152,7 +152,7 @@ public class SvgDataParser implements IParser {
      * 备注：不需要检查lastValues，默认符合需要
      *
      * @param path
-     * @param key 锚点符
+     * @param key 指令符
      * @param values 值数组
      * @param lastValues 末端的坐标值
      * @return 如果无法生成path对象，说明出现异常，即返回null
@@ -252,7 +252,7 @@ public class SvgDataParser implements IParser {
      *
      * 在调用这个方法之前，已经确保字符串以起始符开始；
      * 每次循环都将寻找子路径数据集；
-     * 一次循环可能找到多条连续的同锚点符的子路径；
+     * 一次循环可能找到多条连续的同指令符的子路径；
      */
     private void parseImpl(@NonNull String data, @NonNull final LinkedHashMap<String, float[]> map) {
         if (map.size() > 0) {
@@ -260,7 +260,7 @@ public class SvgDataParser implements IParser {
         }
 
         int maxLen = data.length();
-        //每次循环开始，i都应该指向一个锚点符的下一位
+        //每次循环开始，i都应该指向一个指令符的下一位
         for (int i = 0; i < maxLen; i = ++mCurIndex) {
             mCurIndex = i;
             int lIndex = i;
@@ -280,7 +280,7 @@ public class SvgDataParser implements IParser {
                 continue;
             }
 
-            //解析出正确的字符串，并且此字符串不包含锚点符，且不存在连续的分隔符和空格
+            //解析出正确的字符串，并且此字符串不包含指令符，且不存在连续的分隔符和空格
             //这个方法已经将当前位置mCurIndex更新为当前子路径的末尾位置；
             String subPathData = getPathData(lIndex + 1, data);
             if (subPathData == null) {
@@ -289,7 +289,7 @@ public class SvgDataParser implements IParser {
                 return ;
             }
 
-            //和锚点符拼接
+            //和指令符拼接
             subPathData = startChar + subPathData;
 //            SvgLog.I("解析到的子路径数据为：" + subPathData, "PEEK");
 
@@ -306,7 +306,7 @@ public class SvgDataParser implements IParser {
     }
 
     /**
-     * 获取从起始位置开始，到字符串末端或者第一个锚点符为止 的字符串。
+     * 获取从起始位置开始，到字符串末端或者第一个指令符为止 的字符串。
      *
      * @param startIndex 起始位置
      * @return 如果过程中发现异常情况，则返回null；否则返回解析到的字符串，并且此字符串不存在连续的分隔符
@@ -330,8 +330,8 @@ public class SvgDataParser implements IParser {
         mTempSB.delete(0, mTempSB.length());
 
         //可能有两种情况（都能返回正确位置）：
-        // ①找不到，则认为一直到末端都是有效的；（此时可能包含了多条拥有相同锚点符的连续子路径，这是一种发现的svg简略写法）
-        // ②找到锚点符，返回锚点符前一个位置。
+        // ①找不到，则认为一直到末端都是有效的；（此时可能包含了多条拥有相同指令符的连续子路径，这是一种发现的svg简略写法）
+        // ②找到指令符，返回指令符前一个位置。
         boolean isSeparatorBefore = false;
         mCurIndex = maxLen - 1;
         for (int i = startIndex; i < maxLen; i++) {
@@ -353,7 +353,7 @@ public class SvgDataParser implements IParser {
             if (!isAnchor(c)) {
                 mTempSB.append(isDivider ? SvgConsts.SEPARATOR : c);
             } else {
-//                SvgLog.I("右端找到锚点符");
+//                SvgLog.I("右端找到指令符");
                 mCurIndex = i - 1;
                 break;
             }
@@ -374,14 +374,14 @@ public class SvgDataParser implements IParser {
 
         int paramsNeed = getAnchorParamNum(anchor);
         if (paramsNeed == INDEX_ERROR) {
-            SvgLog.I("无法识别的锚点符：" + anchor);
+            SvgLog.I("无法识别的指令符：" + anchor);
             map.clear();
             return false;
         }
 
         float[] paramArray = new float[paramsNeed];
 
-//        SvgLog.I("锚点符：" + anchor + ", 值个数：" + paramsNeed, "PEEK");
+//        SvgLog.I("指令符：" + anchor + ", 值个数：" + paramsNeed, "PEEK");
 
         int maxLen = pathData.length();
         //将字符串中的所有值解析出来
@@ -419,10 +419,10 @@ public class SvgDataParser implements IParser {
                 return false;
             }
 
-            //支持连续相同锚点符的子路径的简略写法（省略第一条子路径之后的锚点符）
-            //如果值已经够了，但仍未结束，则说明存在连续且相同锚点符的子路径，但字符串中省略了锚点符
+            //支持连续相同指令符的子路径的简略写法（省略第一条子路径之后的指令符）
+            //如果值已经够了，但仍未结束，则说明存在连续且相同指令符的子路径，但字符串中省略了指令符
             if (paramsNeed == 0) {
-                SvgLog.I("已得到足够的值，但仍存在值，说明有相同锚点符的多条子路径");
+                SvgLog.I("已得到足够的值，但仍存在值，说明有相同指令符的多条子路径");
                 map.put(anchor + "" + map.size(), paramArray);
                 paramsNeed = paramArray.length;
             }
@@ -436,7 +436,7 @@ public class SvgDataParser implements IParser {
 
         //如果未能找到足够的值，则视为错误
         if (paramsNeed > 0) {
-            SvgLog.I("错误，未能找到足够的值。锚点符：" + anchor + ", found=" + paramsNeed + ", need=" + getAnchorParamNum(anchor));
+            SvgLog.I("错误，未能找到足够的值。指令符：" + anchor + ", found=" + paramsNeed + ", need=" + getAnchorParamNum(anchor));
             map.clear();
             return false;
         }
@@ -459,7 +459,7 @@ public class SvgDataParser implements IParser {
         return num;
     }
 
-    /** 获得指定锚点符子路径的值个数 */
+    /** 获得指定指令符子路径的值个数 */
     private int getAnchorParamNum(char anchor) {
         int ret = INDEX_ERROR;
 
