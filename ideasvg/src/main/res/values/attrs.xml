@@ -12,14 +12,14 @@
         <attr name="android:layout_height"/>
 
         <!-- svg宽 -->
-        <attr name="svgWidth" format="integer"/>
+<!--        <attr name="svgWidth" format="integer"/>-->
         <!-- svg高 -->
-        <attr name="svgHeight" format="integer"/>
+<!--        <attr name="svgHeight" format="integer"/>-->
 
         <!-- svg图形数据，引用vector xml -->
         <attr name="svgSrc" format="reference"/>
-        <!-- svg的透明度，当定义了此属性，则svgSrc中定义的alpha值将会被忽略 -->
-        <attr name="svgAlpha" format="float"/>
+<!--         svg的透明度，当定义了此属性，则svgSrc中定义的alpha值将会被忽略 -->
+<!--        <attr name="svgAlpha" format="float"/>-->
 
 <!--        &lt;!&ndash; svg绘制模式，[stroke]轮廓 [fill]填充 [stroke_and_fill]填充+轮廓 &ndash;&gt;-->
 <!--        <attr name="svgStyle" format="flags">-->

@@ -29,7 +29,7 @@ public final class SvgCharUtil {
      * @param ch 目标字符
      */
     public static boolean isSvgCommand(char ch) {
-        return SvgConsts.SVG_CMD_UPPER.indexOf(toUpper(ch)) != -1;
+        return SvgConsts.SVG_CMD_UPPER.indexOf(toUpper(ch)) >= 0;
     }
 
     /**

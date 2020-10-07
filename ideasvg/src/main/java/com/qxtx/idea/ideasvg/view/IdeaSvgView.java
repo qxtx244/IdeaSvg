@@ -4,26 +4,37 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.content.res.XmlResourceParser;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.text.TextUtils;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 
-import com.qxtx.idea.ideasvg.BuildConfig;
 import com.qxtx.idea.ideasvg.R;
+import com.qxtx.idea.ideasvg.tools.ScreenUtil;
 import com.qxtx.idea.ideasvg.xmlEntity.VectorElement;
 import com.qxtx.idea.ideasvg.parser.VectorXmlParser;
 import com.qxtx.idea.ideasvg.tools.SvgLog;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @author QXTX-WIN
  * @date 2019/12/3 21:39
- * Description: 提供svg支持的控件，支持导入.svg文件，以及解析资源目录中以vector为根标签的xml
+ * Description: 提供svg支持的控件，支持导入.svg文件，以及解析控件设置的以vector为根标签的xml
  */
 public class IdeaSvgView extends View implements ISvgView {
 
     private final String TAG = getClass().getSimpleName();
+
+    private float mWidth = 0f;
+    private float mHeight = 0f;
+
+    /** svg路径对象列表 */
+    private final List<Path> svgPathList;
 
     /** svg的参数集 */
     private final VectorElement mVectorElement;
@@ -44,6 +55,7 @@ public class IdeaSvgView extends View implements ISvgView {
     public IdeaSvgView(Context context, AttributeSet attrs) {
         super(context, attrs, 0, 0);
 
+        svgPathList = new ArrayList<>();
         mExtraPaint = new Paint();
         mVectorElement = new VectorElement();
         mVectorXmlParser = new VectorXmlParser(getContext());
@@ -53,12 +65,33 @@ public class IdeaSvgView extends View implements ISvgView {
         //获得各种属性值
         TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.IdeaSvgView);
         try {
+            //如果xml中使用@dimen这种引用资源id，则TypedArray.getString()得到的直接是一个(double/float?)数值
+            String widthAttr = a.getString(R.styleable.IdeaSvgView_android_layout_width);
+            String heightAttr = a.getString(R.styleable.IdeaSvgView_android_layout_height);
+            if (widthAttr == null || heightAttr == null) {
+                throw new IllegalStateException("xml中必须设置控件的宽高！");
+            }
+
+            if (!widthAttr.equals(ViewGroup.LayoutParams.WRAP_CONTENT + "")
+                    && !widthAttr.equals(ViewGroup.LayoutParams.MATCH_PARENT + "")) {
+                mWidth = ScreenUtil.parseDimenToPx(context, widthAttr, mWidth);
+            } else {
+                mWidth = Integer.parseInt(widthAttr);
+            }
+
+            if (!heightAttr.equals(ViewGroup.LayoutParams.WRAP_CONTENT + "")
+                    && !heightAttr.equals(ViewGroup.LayoutParams.MATCH_PARENT + "")) {
+                mHeight = ScreenUtil.parseDimenToPx(context, heightAttr, mHeight);
+            } else {
+                mHeight = Integer.parseInt(heightAttr);
+            }
+
+            SvgLog.I(String.format("widthAttr=%s, heightAttr=%s，width=%s, height=%s", widthAttr, heightAttr, mWidth, mHeight));
+
             //xml中配置svg图形宽高
             //未定义svg宽高，则使用原始数据
-            mVectorElement.setWidth(a.getDimension(R.styleable.IdeaSvgView_svgWidth, 0));
-            mVectorElement.setHeight(a.getDimension(R.styleable.IdeaSvgView_svgHeight, 0));
-
-            mVectorElement.setAlpha(a.getFloat(R.styleable.IdeaSvgView_svgAlpha, 1f));
+//            mVectorElement.setWidth(a.getDimension(R.styleable.IdeaSvgView_svgWidth, 0));
+//            mVectorElement.setHeight(a.getDimension(R.styleable.IdeaSvgView_svgHeight, 0));
 
             final int INVALID_ID = Integer.MIN_VALUE;
             int srcId = a.getResourceId(R.styleable.IdeaSvgView_svgSrc, INVALID_ID);
@@ -72,7 +105,7 @@ public class IdeaSvgView extends View implements ISvgView {
         }
         a.recycle();
 
-        SvgLog.I("解析耗时：" + (System.currentTimeMillis() - durationMs) + "ms.\n 获得的参数：" + mVectorElement.toString());
+        Log.e("流程耗时计算", "解析耗时：" + (System.currentTimeMillis() - durationMs) + "ms.\n 获得的参数：" + mVectorElement.toString());
     }
 
     /** invalidate/postInvalidate会先被执行 */
@@ -92,30 +125,6 @@ public class IdeaSvgView extends View implements ISvgView {
         super.onDraw(canvas);
 
         long time = System.currentTimeMillis();
-
-        //LYX_TAG 2020/8/2 22:14 待处理:测试用
-        if (BuildConfig.DEBUG) {
-            Paint paint = new Paint();
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setColor(Color.parseColor("#00ff00"));
-            paint.setStrokeWidth(5f);
-            Path path = new Path();
-
-            //圆弧起点坐标x1，y1
-            double x1 = 100, y1 = 200;
-            //rxHalf长半轴，ryHalf短半轴
-            double rxHalf = 100, ryHalf = 70;
-            //椭圆x轴与画布x轴的夹角（顺时针夹角）
-            double phi = 45;
-            //fa大圆弧1小圆弧0，fs顺时针1逆时针0
-            int fA = 0, fS = 0;
-            //终点坐标x2，y2
-            double x2 = 300, y2 = 200;
-
-            mVectorXmlParser.generateEllipticalArcPath(path, x1, y1, rxHalf, ryHalf, phi, fA, fS, x2, y2);
-
-            canvas.drawPath(path, paint);
-        }
 
         //椭圆外接矩形长宽（长轴和短轴）
         SvgLog.i("绘制耗时[" + (System.currentTimeMillis() - time) + "]ms.");

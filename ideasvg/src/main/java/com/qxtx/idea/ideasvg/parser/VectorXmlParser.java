@@ -23,6 +23,7 @@ import org.xmlpull.v1.XmlPullParser;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 /**
  * CreateDate 2020/5/20 23:48
@@ -38,127 +39,6 @@ public final class VectorXmlParser {
 
     public VectorXmlParser(@NonNull Context context) {
         mContext = context.getApplicationContext();
-    }
-
-    /**
-     * 解析vector xml中的path标签
-     */
-    private void parsePathElement(@NonNull XmlResourceParser xmlParser, List<PathElement> elementList) {
-        PathElement element = new PathElement();
-
-        int attrCount = xmlParser.getAttributeCount();
-        for (int i = 0; i < attrCount; i++) {
-            switch (xmlParser.getAttributeName(i)) {
-                case "pathData":
-                    element.setPathString(xmlParser.getAttributeValue(i));
-                    break;
-                case "strokeWidth":
-                    element.setStrokeWidth(xmlParser.getAttributeFloatValue(i, element.getStrokeWidth()));
-                    break;
-                case "strokeColor":
-                    element.setStrokeColor(xmlParser.getAttributeIntValue(i, element.getStrokeColor()));
-                    break;
-                case "strokeAlpha":
-                    //需要与全局透明度叠加
-                    element.setStrokeAlpha(xmlParser.getAttributeFloatValue(i, element.getStrokeAlpha()));
-                    break;
-                case "fillAlpha":
-                    //需要与全局透明度叠加
-                    element.setFillAlpha(xmlParser.getAttributeFloatValue(i, element.getFillAlpha()));
-                    break;
-                case "fillColor":
-                    element.setFillColor(xmlParser.getAttributeIntValue(i, element.getFillColor()));
-                    break;
-                case "name":
-                    element.setName(xmlParser.getAttributeValue(i));
-                    break;
-                case "strokeLineCap":
-                    element.setStrokeLineCap(xmlParser.getAttributeIntValue(i, element.getStrokeLineCap()));
-                    break;
-                case "strokeLineJoin":
-                    element.setStrokeLineJoin(xmlParser.getAttributeIntValue(i, element.getStrokeLineJoin()));
-                    break;
-                case "strokeMiterLimit":
-                    element.setStrokeMiterLimit(xmlParser.getAttributeFloatValue(i, element.getStrokeMiterLimit()));
-                    break;
-                case "trimPathStart":
-                    element.setTrimPathStart(xmlParser.getAttributeFloatValue(i, element.getTrimPathStart()));
-                    break;
-                case "trimPathEnd":
-                    element.setTrimPathEnd(xmlParser.getAttributeFloatValue(i, element.getTrimPathEnd()));
-                    break;
-                case "trimPathOffset":
-                    element.setTrimPathOffset(xmlParser.getAttributeFloatValue(i, element.getTrimPathOffset()));
-                    break;
-            }
-        }
-        elementList.add(element);
-    }
-
-    /**
-     * 解析vector xml中的clip-path标签
-     */
-    private void parseClipPathElement(@NonNull XmlResourceParser xmlParser, List<ClipPathElement> elementList) {
-
-    }
-
-    /**
-     * 解析vector xml中的group标签
-     */
-    private void parseGroupElement(@NonNull XmlResourceParser xmlParser, List<GroupElement> element) {
-
-    }
-
-    /**
-     * 解析vector标签的根属性
-     */
-    private void parseVectorAttributes(@NonNull XmlResourceParser xmlParser, @NonNull VectorElement rootElement) {
-        String value;
-        int attrCount = xmlParser.getAttributeCount();
-        for (int i = 0; i < attrCount; i++) {
-            switch (xmlParser.getAttributeName(i)) {
-                case "width":
-                    //dimen类型数值字符串
-                    rootElement.setWidth(parseDimenToPx(xmlParser.getAttributeValue(i), rootElement.getWidth()));
-                    break;
-                case "height":
-                    //dimen类型数值字符串
-                    rootElement.setWidth(parseDimenToPx(xmlParser.getAttributeValue(i), rootElement.getHeight()));
-                    break;
-                case "viewportWidth":
-                    //解析可能得到小数或者整数，但肯定是float
-                    rootElement.setViewportWidth(xmlParser.getAttributeFloatValue(i, 0f));
-                    break;
-                case "viewportHeight":
-                    //解析可能得到小数或者整数，但肯定是float
-                    rootElement.setViewportHeight(xmlParser.getAttributeFloatValue(i, 0f));
-                    break;
-                case "alpha":
-                    rootElement.setAlpha(xmlParser.getAttributeFloatValue(i, 1f));
-                    break;
-                case "name":
-                    rootElement.setName(xmlParser.getAttributeValue(i));
-                    break;
-                case "tint":
-                    //color类型，一种是资源id（@），一种是color字符串（#）
-                    value = xmlParser.getAttributeValue(i);
-                    int tint = rootElement.getTint();
-                    char firstChar = value.charAt(0);
-                    if (firstChar == '#') {
-                        tint = Color.parseColor(value);
-                    } else if (firstChar == '@') {
-                        tint = mContext.getResources().getColor(xmlParser.getAttributeResourceValue(i, tint));
-                    }
-                    rootElement.setTint(tint);
-                    break;
-                case "tintMode":
-                    rootElement.setTintMode(xmlParser.getAttributeValue(i));
-                    break;
-                case "autoMirror":
-                    rootElement.setAutoMirrored(xmlParser.getAttributeBooleanValue(i, rootElement.isAutoMirrored()));
-                    break;
-            }
-        }
     }
 
     /**
@@ -255,7 +135,7 @@ public final class VectorXmlParser {
         //一次循环应该以起始指令符为开始，以结束指令符为结束（或者在字符串结尾，Z/z被忽略）
         //每次循环都会获取到一条指令符轨迹数据（也可能是具有连续相同指令符的多条指令符轨迹数据拼接）完整数据
         while (pos < dataLen) {
-            SvgLog.i("一次子路径开始位置：" + pos);
+            SvgLog.i("一个指令符数据开始位置：" + pos);
             char ch = pathData.charAt(pos);
             //如果是[空格]或[逗号]分隔符，则跳过
             if (ch == ' ' || ch == ',') {
@@ -269,11 +149,11 @@ public final class VectorXmlParser {
                 return false;
             }
 
-            char anchor = ch;
+            char cmd = ch;
             //如果是结束指令符Z/z，则可以立即完成本次循环任务，进行下一次循环
-            if (SvgCharUtil.toUpper(anchor) == SvgConsts.SVG_END_CHAR_UPPER) {
-                SvgLog.i("发现结束指令符" + anchor + ", 快速完成本次循环任务");
-                addSubPath(pathDataList, anchor, null);
+            if (SvgCharUtil.toUpper(cmd) == SvgConsts.SVG_END_CHAR_UPPER) {
+                SvgLog.i("发现结束指令符" + cmd + ", 快速完成本次循环任务");
+                addSubPath(pathDataList, cmd, null);
                 pos++;
                 continue;
             }
@@ -296,6 +176,7 @@ public final class VectorXmlParser {
 
                 //碰到指令符，本次指令符轨迹数据已全部获取到，完成本次循环
                 if (SvgCharUtil.isSvgCommand(ch)) {
+                    SvgLog.I("碰到指令符[" + ch + "]，位置[" + pos + "]. 此时未处理数据[" + sb.toString() + "].");
                     if (sb.length() > 0 && !addValue(valueList, sb.toString())) {
                         return false;
                     }
@@ -303,28 +184,22 @@ public final class VectorXmlParser {
                     break;
                 }
 
-                //如果碰到的是[,]或[ ]，说明一个数值的数据获取完成，并且跳过之后连续的[,]或[ ]
+                //如果碰到的是[,]或[ ]，此时字符收集器存在数据，则说明一个数值的数据获取完成，并且跳过之后连续的[,]或[ ]
                 if (ch == ',' || ch == ' ') {
+                    //如果字符收集器没有任何数据，说明当前的分隔符号需要跳过
+                    if (sb.length() == 0) {
+                        continue;
+                    }
+
                     if (!addValue(valueList, sb.toString())) {
+                        SvgLog.I("解析指令符的数值失败！指令[" + cmd + "]，当前解析位置[" + pos + "].");
                         return false;
                     }
 
-                    //跳过之后连续的[,]和[ ]分隔符
-                    int checkPos = pos + 1;
-                    while (checkPos < dataLen) {
-                        char nextChar = pathData.charAt(checkPos);
-                        if (nextChar != ',' && nextChar != ' ') {
-                            //外层循环会主动位置右移，因此这里不能做位置右移，需要复位
-                            pos = checkPos - 1;
-                            break;
-                        }
-                        checkPos++;
-                    }
-
+                    SvgLog.i("数值[" + sb.toString() + "]获取完成，获取下一个数值。当前位置[" + pos + "].");
                     sb.delete(0, sb.length());
                     negPointReady = false;
                     decimalPointReady = false;
-                    SvgLog.i("一个数值获取完成，获取下一个数值。当前位置[" + pos + "].");
                 }
                 //当前字符可能不仅仅为数值的一部分，同时还是分隔符。
                 else if (ch == '-') {
@@ -371,7 +246,107 @@ public final class VectorXmlParser {
                 }
             }
 
-            addSubPath(pathDataList, anchor, valueList);
+            addSubPath(pathDataList, cmd, valueList);
+        }
+        return true;
+    }
+
+    /**
+     * 生成Path对象列表
+     * @throws Exception 如果数据不正确（如某个指令符携带的数值数量不符合要求），将会导致解析出错，抛出异常
+     */
+    public static boolean generatePath(@NonNull List<PathData> list, @NonNull Path path) throws Exception {
+        path.reset();
+        if (list.size() == 0) {
+            return false;
+        }
+
+        for (int index = 0; index < list.size(); index++) {
+            PathData pathData = list.get(index);
+            if (pathData == null) {
+                continue;
+            }
+
+            char cmd = pathData.getCommand();
+            float[] endCoordinate = pathData.getEndCoordinate();
+            //可能一个指令符携带了n个相同指令符的数据，如[M 1，2，3，4，5，6]
+            List<Float> values = pathData.getValueList();
+            int valueCount = values.size();
+            if (SvgCharUtil.toUpper(cmd) != SvgConsts.SVG_END_CHAR_UPPER && values.size() == 0) {
+                SvgLog.I("非法的指令符数据！");
+                continue;
+            }
+
+            switch (SvgCharUtil.toUpper(cmd)) {
+                case 'M': //2
+                    path.moveTo(endCoordinate[0], endCoordinate[1]);
+                    break;
+                case 'H': //1
+                case 'V': //1
+                case 'L': //2
+                    path.lineTo(endCoordinate[0], endCoordinate[1]);
+                    break;
+                case 'Q': //4
+                    for (int i = 0; i < valueCount; i += 4) {
+                        if (i + 3 >= valueCount) {
+                            SvgLog.I("无法生成路径：未获取到足够的数值。cmd[" + cmd + "]. values" + Arrays.toString(values.toArray(new Float[0])));
+                            return false;
+                        }
+
+                        boolean isRefCommand = Character.isLowerCase(cmd);
+                        if (isRefCommand) {
+                            path.rQuadTo(values.get(i), values.get(i + 1), values.get(i + 2), values.get(i + 3));
+                        } else {
+                            path.quadTo(values.get(i), values.get(i + 1), values.get(i + 2), values.get(i + 3));
+                        }
+                    }
+                    break;
+                case 'C': //6
+                    for (int i = 0; i < valueCount; i += 6) {
+                        if (i + 5 >= valueCount) {
+                            SvgLog.I("无法生成路径：未获取到足够的数值。cmd[" + cmd + "]. values" + Arrays.toString(values.toArray(new Float[0])));
+                            return false;
+                        }
+
+                        boolean isRefCommand = Character.isLowerCase(cmd);
+                        if (isRefCommand) {
+                            path.rCubicTo(values.get(i), values.get(i + 1), values.get(i + 2), values.get(i + 3), values.get(i + 4), values.get(i + 5));
+                        } else {
+                            path.cubicTo(values.get(i), values.get(i + 1), values.get(i + 2), values.get(i + 3), values.get(i + 4), values.get(i + 5));
+                        }
+                    }
+                    break;
+                case 'A': //7
+                    for (int i = 0; i < valueCount; i += 7) {
+                        if (i + 6 >= valueCount) {
+                            SvgLog.I("无法生成路径：未获取到足够的数值。cmd[" + cmd + "]. values" + Arrays.toString(values.toArray(new Float[0])));
+                            return false;
+                        }
+
+                        PathData lastPathData = list.get(index - 1);
+                        float x1 = lastPathData.getEndCoordinate()[0];
+                        float y1 = lastPathData.getEndCoordinate()[1];
+                        double rxHalf = values.get(i);
+                        double ryHalf = values.get(i + 1);
+                        double phi = values.get(i + 2);
+                        double fA = values.get(i + 3);
+                        double fS = values.get(i + 4);
+                        boolean isRefCommand = Character.isLowerCase(cmd);
+                        double x2 = values.get(i + 5) + (isRefCommand ? x1 : 0);
+                        double y2 = values.get(i + 6) + (isRefCommand ? y1 : 0);
+                        generateEllipticalArcPath(path, x1, y1, rxHalf, ryHalf, phi, fA, fS, x2, y2);
+                    }
+                    break;
+                case 'Z': //0
+                    path.close();
+                    break;
+                case 'T': //2
+                case 'S': //4
+                default:
+                    //这里不会出现T/S/t/s指令符，前面已经进行转换了
+                    SvgLog.I("无法处理的指令符[" + cmd + "], value" + Arrays.toString(values.toArray(new Float[0])));
+                    return false;
+            }
         }
         return true;
     }
@@ -392,7 +367,7 @@ public final class VectorXmlParser {
      * 备注：小数计算会有精度问题，可能导致得到的数值变小了
      *       目前可能无法正确解析错误的椭圆弧线数据
      */
-    public void generateEllipticalArcPath(@NonNull Path path, double x1, double y1,
+    private static void generateEllipticalArcPath(@NonNull Path path, double x1, double y1,
                                           double rxHalf, double ryHalf, double phi, double fA, double fS, double x2, double y2) {
 
         if (rxHalf == ryHalf) {
@@ -448,6 +423,132 @@ public final class VectorXmlParser {
         for (x = x1; x <= x2; x += deltaValue) {
             y = cy + Math.sqrt(1 - Math.pow(x - cx, 2) / Math.pow(rxHalf, 2)) * ryHalf;
             path.lineTo((float)x, (float)y);
+        }
+    }
+
+    /**
+     * 解析vector xml中的path标签
+     */
+    private void parsePathElement(@NonNull XmlResourceParser xmlParser, List<PathElement> elementList) {
+        PathElement element = new PathElement();
+
+        int attrCount = xmlParser.getAttributeCount();
+        for (int i = 0; i < attrCount; i++) {
+            switch (xmlParser.getAttributeName(i)) {
+                case "pathData":
+                    element.setPathString(xmlParser.getAttributeValue(i));
+                    break;
+                case "strokeWidth":
+                    element.setStrokeWidth(xmlParser.getAttributeFloatValue(i, element.getStrokeWidth()));
+                    break;
+                case "strokeColor":
+                    element.setStrokeColor(xmlParser.getAttributeIntValue(i, element.getStrokeColor()));
+                    break;
+                case "strokeAlpha":
+                    //需要与全局透明度叠加
+                    element.setStrokeAlpha(xmlParser.getAttributeFloatValue(i, element.getStrokeAlpha()));
+                    break;
+                case "fillAlpha":
+                    //需要与全局透明度叠加
+                    element.setFillAlpha(xmlParser.getAttributeFloatValue(i, element.getFillAlpha()));
+                    break;
+                case "fillColor":
+                    element.setFillColor(xmlParser.getAttributeIntValue(i, element.getFillColor()));
+                    break;
+                case "name":
+                    element.setName(xmlParser.getAttributeValue(i));
+                    break;
+                case "strokeLineCap":
+                    element.setStrokeLineCap(xmlParser.getAttributeIntValue(i, element.getStrokeLineCap()));
+                    break;
+                case "strokeLineJoin":
+                    element.setStrokeLineJoin(xmlParser.getAttributeIntValue(i, element.getStrokeLineJoin()));
+                    break;
+                case "strokeMiterLimit":
+                    element.setStrokeMiterLimit(xmlParser.getAttributeFloatValue(i, element.getStrokeMiterLimit()));
+                    break;
+                case "trimPathStart":
+                    element.setTrimPathStart(xmlParser.getAttributeFloatValue(i, element.getTrimPathStart()));
+                    break;
+                case "trimPathEnd":
+                    element.setTrimPathEnd(xmlParser.getAttributeFloatValue(i, element.getTrimPathEnd()));
+                    break;
+                case "trimPathOffset":
+                    element.setTrimPathOffset(xmlParser.getAttributeFloatValue(i, element.getTrimPathOffset()));
+                    break;
+            }
+        }
+        elementList.add(element);
+    }
+
+    /**
+     * 解析vector xml中的clip-path标签
+     */
+    private void parseClipPathElement(@NonNull XmlResourceParser xmlParser, List<ClipPathElement> elementList) {
+
+    }
+
+    /**
+     * 解析vector xml中的group标签
+     */
+    private void parseGroupElement(@NonNull XmlResourceParser xmlParser, List<GroupElement> element) {
+
+    }
+
+    /**
+     * 解析vector标签的根属性
+     */
+    private void parseVectorAttributes(@NonNull XmlResourceParser xmlParser, @NonNull VectorElement rootElement) {
+        String value;
+        int attrCount = xmlParser.getAttributeCount();
+        for (int i = 0; i < attrCount; i++) {
+            switch (xmlParser.getAttributeName(i)) {
+                case "width":
+                    //dimen类型数值字符串
+                    rootElement.setWidth(ScreenUtil.parseDimenToPx(mContext, xmlParser.getAttributeValue(i), rootElement.getWidth()));
+                    break;
+                case "height":
+                    //dimen类型数值字符串
+                    rootElement.setHeight(ScreenUtil.parseDimenToPx(mContext, xmlParser.getAttributeValue(i), rootElement.getHeight()));
+                    break;
+                case "viewportWidth":
+                    //解析可能得到小数或者整数，但肯定是float
+                    rootElement.setViewportWidth(xmlParser.getAttributeFloatValue(i, 0f));
+                    break;
+                case "viewportHeight":
+                    //解析可能得到小数或者整数，但肯定是float
+                    rootElement.setViewportHeight(xmlParser.getAttributeFloatValue(i, 0f));
+                    break;
+                case "alpha":
+                    rootElement.setAlpha(xmlParser.getAttributeFloatValue(i, 1f));
+                    break;
+                case "name":
+                    rootElement.setName(xmlParser.getAttributeValue(i));
+                    break;
+                case "tint":
+                    //color类型，一种是资源id（@），一种是color字符串（#）。如果是@null，将会被解析成@0（id=0，非法）。或许可以容错一下
+                    value = xmlParser.getAttributeValue(i);
+                    int tint = rootElement.getTint();
+                    char firstChar = value.charAt(0);
+                    if (firstChar == '#') {
+                        tint = Color.parseColor(value);
+                    } else if (firstChar == '@') {
+                        int id = Integer.parseInt(value.substring(1));
+                        if (id == 0) {
+                            tint = Color.TRANSPARENT;
+                        } else {
+                            tint = mContext.getResources().getColor(id);
+                        }
+                    }
+                    rootElement.setTint(tint);
+                    break;
+                case "tintMode":
+                    rootElement.setTintMode(xmlParser.getAttributeValue(i));
+                    break;
+                case "autoMirror":
+                    rootElement.setAutoMirrored(xmlParser.getAttributeBooleanValue(i, rootElement.isAutoMirrored()));
+                    break;
+            }
         }
     }
 
@@ -525,11 +626,14 @@ public final class VectorXmlParser {
 
     /** 添加一个数值到数值列表 */
     private static boolean addValue(List<Float> list, String value) {
-        SvgLog.i("得到一个数值：" + value);
+//        SvgLog.i("得到一个数值[" + value + "].");
+        if (TextUtils.isEmpty(value)) {
+            return false;
+        }
         try {
             list.add(Float.parseFloat(value));
         } catch (Exception e) {
-            SvgLog.i("解析字符串数值异常。流程应立即终止。原因=" + e.getLocalizedMessage());
+            SvgLog.i("解析字符串数值[" + value + "]异常。流程应立即终止。原因=" + e.getLocalizedMessage());
             return false;
         }
         return true;
@@ -647,30 +751,5 @@ public final class VectorXmlParser {
         if (!ret) {
             SvgLog.I("添加路径指令数据失败了！数据=" + pathData.toString());
         }
-    }
-
-    /**
-     * 将xml中的dimen值转换成px
-     * @param dimen 带dimen单位的数值字符串
-     * @param defValue 默认数值
-     */
-    private float parseDimenToPx(String dimen, float defValue) {
-        if (TextUtils.isEmpty(dimen)) {
-            return defValue;
-        }
-
-        float result = defValue;
-        int len = dimen.length();
-        float value;
-        if (dimen.endsWith("dip")) {
-            value = Float.parseFloat(dimen.substring(0, len - 3));
-            result = ScreenUtil.dp2Px(mContext, value);
-        } else if (dimen.endsWith("dp")) {
-            value = Float.parseFloat(dimen.substring(0, len - 2));
-            result = ScreenUtil.dp2Px(mContext, value);
-        } else if (dimen.endsWith("px")) {
-            result = Float.parseFloat(dimen.substring(0, len - 2));
-        }
-        return Math.max(0f, result);
     }
 }

@@ -1,7 +1,7 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="1024dp" android:height="1024dp"
     android:viewportHeight="1024" android:viewportWidth="1024"
-    android:alpha="1f"
+    android:alpha="1.0"
     android:name="测试xml"
     android:tint="@null"
     android:tintMode="multiply"
@@ -9,16 +9,10 @@
     <path
         android:strokeColor="#97DCFF"
         android:strokeWidth="5"
-        android:pathData="M10 80 C 10 80 150 150, 180 80" />
+        android:pathData="M10 80 C 40 10, 65 20, 95 80 S 150 150, 180 80" />
 <!--    <path-->
 <!--        android:strokeColor="#97DCFF"-->
 <!--        android:strokeWidth="5"-->
 <!--        android:pathData="M0 0 T180 150 T220 30 T20 340"-->
 <!--        android:fillColor="#000000" />-->
-    <clip-path >
-    </clip-path>
-
-    <group>
-
-    </group>
 </vector>

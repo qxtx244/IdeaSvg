@@ -5,6 +5,8 @@ import android.graphics.Path;
 import android.support.annotation.NonNull;
 
 import com.qxtx.idea.ideasvg.parser.VectorXmlParser;
+import com.qxtx.idea.ideasvg.tools.SvgCharUtil;
+import com.qxtx.idea.ideasvg.tools.SvgConsts;
 import com.qxtx.idea.ideasvg.tools.SvgLog;
 
 import java.util.ArrayList;
@@ -77,156 +79,6 @@ public final class PathElement {
         trimPathEnd = Float.MIN_VALUE;
     }
 
-    /**
-     * 由指令符数据集生成Path对象列表
-     * @throws Exception 如果数据不正确（如某个指令符携带的数值数量不符合要求），将会导致解析出错，抛出异常
-     */
-    private void generatePath() throws Exception {
-        path.reset();
-        if (pathDataMap == null || pathDataMap.size() == 0) {
-            return ;
-        }
-
-        float lastX = 0f, lastY = 0f;
-        String[] keyArray = (String[])pathDataMap.keySet().toArray();
-        for (int i = 0; i < keyArray.length; i++) {
-            String key = keyArray[i];
-            char anchor = key.charAt(0);
-            //可能一个指令符携带了n个相同指令符的数据，如[M 1，2，3，4，5，6]这样的数据，实际上是3个M轨迹的数据，只是指令符被省略了
-            List<Float> values = pathDataMap.get(key);
-            if (anchor != 'Z' && anchor != 'z'
-                    && (values == null || values.size() == 0)) {
-                throw new IllegalStateException("非法的指令符数据！");
-            }
-
-            switch (anchor) {
-                case 'M': //2
-                    lastX = values.get(values.size() - 2);
-                    lastY = values.get(values.size() - 1);
-                    path.moveTo(lastX, lastY);
-                    break;
-                case 'H': //1
-                    lastX = values.get(values.size() - 1);
-                    path.lineTo(lastX, lastY);
-                    break;
-                case 'V': //1
-                    lastY = values.get(values.size() - 1);
-                    path.lineTo(lastX, lastY);
-                    break;
-                case 'L': //2
-                    lastX = values.get(values.size() - 2);
-                    lastY = values.get(values.size() - 1);
-                    path.lineTo(lastX, lastY);
-                    break;
-                case 'T': //2，Q（二次贝塞尔）的简写指令符。T前面必须是Q或者T指令符，否则将得到一条直线
-                    processAnchorT(values, keyArray, i, lastX, lastY);
-                    lastX = values.get(values.size() - 2);
-                    lastY = values.get(values.size() - 1);
-                    break;
-                case 'S': //4，简化的贝塞尔曲线。S前面必须是C或S指令符，否则两个控制点将是同一个
-                    break;
-                case 'Q': //4
-                    lastX = values.get(2);
-                    lastY = values.get(3);
-                    path.quadTo(values.get(0), values.get(1), lastX, lastY);
-                    break;
-                case 'C': //6
-                    lastX = values.get(4);
-                    lastY = values.get(5);
-                    path.cubicTo(values.get(0), values.get(1), values.get(2), values.get(3), lastX, lastY);
-                    break;
-                case 'A': //7
-                    break;
-                case 'Z':
-                case 'z':
-                    path.close();
-                    break;
-                case 'm': //2
-                    lastX += values.get(0);
-                    lastY += values.get(1);
-                    path.moveTo(lastX, lastY);
-                    break;
-                case 'h': //1
-                    lastX += values.get(0);
-                    path.lineTo(lastX, lastY);
-                    break;
-                case 'v': //1
-                    lastY += values.get(0);
-                    path.lineTo(lastX, lastY);
-                    break;
-                case 'l': //2
-                    lastX += values.get(0);
-                    lastY += values.get(1);
-                    path.lineTo(lastX, lastY);
-                    break;
-                case 't': //2
-                    break;
-                case 's': //4
-                    break;
-                case 'q': //4
-                    lastX += values.get(2);
-                    lastY += values.get(3);
-                    path.rQuadTo(values.get(0), values.get(1), values.get(2), values.get(3));
-                    break;
-                case 'c': //6
-                    lastX += values.get(4);
-                    lastY += values.get(5);
-                    path.rCubicTo(values.get(0), values.get(1), values.get(2), values.get(3), values.get(4), values.get(5));
-                    break;
-                case 'a': //7
-                    break;
-            }
-        }
-    }
-
-    /** 处理T指令符轨迹 */
-    private void processAnchorT(List<Float> values, String[] keyArray, int keyIndex, float lastX, float lastY) {
-        float x1, y1, x2, y2;
-
-        //先计算第一个T，后面的就好算了
-        x2 = values.get(0);
-        y2 = values.get(1);
-        //如果前一个指令符是Q，则直接解析；如果是T，则需要继续往前找；如果两者都不是，则取其终点坐标
-        int refKeyIndex = findTRefAnchorIndex(keyArray, keyIndex);
-        String refKey = keyArray[refKeyIndex];
-        List<Float> refValues = pathDataMap.get(refKey);
-        if (refKey.charAt(0) == 'Q') {
-            int size = refValues.size();
-            x1 = values.get(keyIndex) + refValues.get(size - 2) - refValues.get(size - 4);
-            y1 = values.get(keyIndex + 1) + refValues.get(size - 1) - refValues.get(size - 3);
-        } else {
-            //LYX_TAG 2020/9/19 21:10 暂不支持相对指令符q/t（即小写的指令符）作为参考指令符，此时视其为普通指令符，一律取最后坐标。也不支持T T T这样的连续T，
-            // 仅支持[非T指令符X T]这样的格式
-            // ！！！需要重新整理，在上一步parsePathData的时候，就将T转换成Q
-            SvgLog.i("暂不支持相对指令符（即小写的指令符）作为参考指令符，因此直接以直线轨迹绘制");
-            x1 = refValues.get(refValues.size() - 2);
-            y1 = refValues.get(refValues.size() - 1);
-            //前面可能还隔了n个T，可能是M T T ... T 当前T
-            for (int i = refKeyIndex; i < keyIndex; i++) {
-            }
-        }
-        path.quadTo(x1, y1, x2, y2);
-    }
-
-    /**
-     * 找到前面能够为T指令符提供参考的指令符索引。
-     * @param keyArray 指令符索引数组
-     * @param keyIndex 当前T指令符索引
-     * @return 参考指令符的索引
-     */
-    private int findTRefAnchorIndex(@NonNull String[] keyArray, int keyIndex) {
-        int ret = 0;
-        for (int i = keyIndex - 1; i >= 0; i--) {
-            char anchor = keyArray[i].charAt(i);
-            if (anchor != 'T') {
-                //LYX_TAG 2020/9/19 23:12 t/q，暂时当作普通指令符来处理
-                ret = i;
-                break;
-            }
-        }
-        return ret;
-    }
-
     public Path getPath() {
         return path;
     }
@@ -245,6 +97,14 @@ public final class PathElement {
             //更新到路径数据列表
             if (!VectorXmlParser.parsePathDataAttribute(pathString, pathDataList)) {
                 pathDataList.clear();
+                path.reset();
+                return ;
+            }
+
+            if (!VectorXmlParser.generatePath(pathDataList, path)) {
+                pathDataList.clear();
+                path.reset();
+                return ;
             }
         } catch (Exception e) {
             SvgLog.i("解析pathData发生异常！" + e);
