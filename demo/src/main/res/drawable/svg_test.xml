@@ -9,11 +9,13 @@
     <path
         android:strokeColor="#97DCFF"
         android:strokeWidth="5"
-        android:pathData="M0 0 T180 150 T220 30 T20 340"
-        android:fillColor="#000000" />
-<!--        android:pathData="M10 80 Q 10 80 180 150 Q 350 220 220 30 Q 90 -160 20 340"/>-->
+        android:pathData="M10 80 C 10 80 150 150, 180 80" />
+<!--    <path-->
+<!--        android:strokeColor="#97DCFF"-->
+<!--        android:strokeWidth="5"-->
+<!--        android:pathData="M0 0 T180 150 T220 30 T20 340"-->
+<!--        android:fillColor="#000000" />-->
     <clip-path >
-        元素节点
     </clip-path>
 
     <group>

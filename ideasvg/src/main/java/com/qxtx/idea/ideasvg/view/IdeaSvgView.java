@@ -25,17 +25,17 @@ public class IdeaSvgView extends View implements ISvgView {
 
     private final String TAG = getClass().getSimpleName();
 
-    /** 控件背景 */
-    private int mBgResId;
-
-    /** 此paint负责绘制背景等svg之外的元素，不参与svg的绘制 */
-    private final Paint mExtraPaint;
-
     /** svg的参数集 */
     private final VectorElement mVectorElement;
 
     /** svg数据解析器 */
     private final VectorXmlParser mVectorXmlParser;
+
+    /** 控件背景 */
+    private int mBgResId;
+
+    /** 此paint负责绘制背景等svg之外的元素，不参与svg的绘制 */
+    private final Paint mExtraPaint;
 
     /**
      * 控件的构造方法，可以在这里获得控件的xml属性值
@@ -55,7 +55,6 @@ public class IdeaSvgView extends View implements ISvgView {
         try {
             //xml中配置svg图形宽高
             //未定义svg宽高，则使用原始数据
-            //LYX_TAG 2020/9/14 22:58 这个得到px还是dp数值？
             mVectorElement.setWidth(a.getDimension(R.styleable.IdeaSvgView_svgWidth, 0));
             mVectorElement.setHeight(a.getDimension(R.styleable.IdeaSvgView_svgHeight, 0));
 

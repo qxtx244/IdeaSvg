@@ -22,7 +22,6 @@ import org.xmlpull.v1.XmlPullParser;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
 
 /**
@@ -266,7 +265,7 @@ public final class VectorXmlParser {
 
             //保证本次循环指向的字符是起始指令符。
             if (!SvgCharUtil.isSvgCommand(ch)) {
-                SvgLog.i("必须以指令符为开始。解析失败：起始有效字符[" + ch + "]，pos[" + pos + "].");
+                SvgLog.i("数据解析失败：必须以指令符为开始字符。起始有效字符[" + ch + "]，位置[" + pos + "].");
                 return false;
             }
 
@@ -374,7 +373,6 @@ public final class VectorXmlParser {
 
             addSubPath(pathDataList, anchor, valueList);
         }
-
         return true;
     }
 
@@ -454,48 +452,75 @@ public final class VectorXmlParser {
     }
 
     /**
-     * 将一些特殊的指令符轨迹转换成能被Path直接表示出来的指令符。
-     * 如T转换成Q后，可使用{@link Path#quadTo(float, float, float, float)}来表示。
-     * 并且，将一些必要的相对指令符转换成绝对指令符，比如m->M
+     * 将一些特殊指令符转换成能被Path表达的指令符。
+     * 如T转换成Q后，可使用{@link Path#quadTo(float, float, float, float)}来表达；
+     * S转换成C后，可使用{@link Path#cubicTo(float, float, float, float, float, float)}来表达。
      */
-    private static void convertSpecialCommand(@NonNull List<PathData> list, PathData pathData) {
+    private static boolean addSpecialCommand(@NonNull List<PathData> list, PathData pathData) {
         char newCmd = pathData.getCommand();
 
-        switch (newCmd) {
-            case 'T':
-                pathData.setCommand('S');
-                List<Float> refValues = pathData.getValueList();
-                if (refValues.size() == 0) {
-                    break;
-                }
-
-                float x1, y1, x2, y2;
-                for (int i = 0; i < valueList.size(); i += 2) {
-                    x2 = valueList.get(i);
-                    y2 = valueList.get(i + 1);
-                    int size = refValues.size();
-                    if (lastKey.charAt(0) == 'Q') {
-                        x1 = x2 + refValues.get(size - 2) - refValues.get(size - 4);
-                        y1 = y2 + refValues.get(size - 1) - refValues.get(size - 3);
-                    } else {
-                        x1 = refValues.get(size - 2);
-                        y1 = refValues.get(size - 1);
-                    }
-                    addSubPath(map, convertAnchor, Arrays.asList(x1, y1, x2, y2));
-                }
-                break;
-            case 'S':
-                newCmd = 'C';
-                //LYX_TAG 2020/9/20 18:29 未实现
-                break;
-            case 't':
-                break;
-            case 's':
-                break;
-            default:
-                break;
+        List<Float> valueList = pathData.getValueList();
+        int valueCount = valueList.size();
+        if (valueCount == 0) {
+            SvgLog.I("缺少数值的指令符，忽略它");
+            return false;
         }
 
+        float x1, y1, x2, y2, x, y;
+        switch (SvgCharUtil.toUpper(newCmd)) {
+            //指令Q的简写，规定前一个指令符应该是Q/T/q/t的一种（为T提供参考数据）。否则T的结果将只是一条直线。
+            // 这里不可能是T/t，因为T/t总是会被转换成Q
+            case 'T':
+                for (int i = 0; i < valueCount; i += 2) {
+                    PathData lastPathData = list.get(list.size() - 1);
+                    x1 = lastPathData.getEndCoordinate()[0];
+                    y1 = lastPathData.getEndCoordinate()[1];
+
+                    //需要转换成绝对坐标
+                    boolean isRefCoordinate = Character.isLowerCase(newCmd);
+                    x = valueList.get(i) + (isRefCoordinate ? x1 : 0);
+                    y = valueList.get(i + 1) + (isRefCoordinate ? y1 : 0);
+
+                    char lastCommand = lastPathData.getCommand();
+                    if (SvgCharUtil.toUpper(lastCommand) == 'Q') {
+                        List<Float> lastValueList = lastPathData.getValueList();
+                        int lastValueCount = lastValueList.size();
+                        x1 += lastValueList.get(lastValueCount - 2) - lastValueList.get(lastValueCount - 4);
+                        y1 += lastValueList.get(lastValueCount - 1) - lastValueList.get(lastValueCount - 3);
+                    }
+
+                    list.add(new PathData('Q', Arrays.asList(x1, y1, x, y), x, y));
+                }
+                break;
+            //指令C的简写，规定前一个指令符应该是C/c/S/s的一种（为T提供参考数据），否则S的第一个控制点将认为和前一个指令符的终点坐标相同。
+            // 这里不可能是S/s，因为S/s总是会先被转换成C
+            case 'S':
+                for (int i = 0; i < valueCount; i += 4) {
+                    PathData lastPathData = list.get(list.size() - 1);
+                    x1 = lastPathData.getEndCoordinate()[0];
+                    y1 = lastPathData.getEndCoordinate()[1];
+
+                    //需要转换成绝对坐标
+                    boolean isRefCoordinate = Character.isLowerCase(newCmd);
+                    x2 = valueList.get(i) + (isRefCoordinate ? x1 : 0);
+                    y2 = valueList.get(i + 1) + (isRefCoordinate ? y1 : 0);
+                    x = valueList.get(i + 2) + (isRefCoordinate ? x1 : 0);
+                    y = valueList.get(i + 3) + (isRefCoordinate ? y1 : 0);
+
+                    //前一个指令符不可能是特殊指令符S/s
+                    char lastCommand = lastPathData.getCommand();
+                    if (SvgCharUtil.toUpper(lastCommand) == 'C') {
+                        List<Float> lastValueList = lastPathData.getValueList();
+                        int lastValueCount = lastValueList.size();
+                        x1 += lastValueList.get(lastValueCount - 2) - lastValueList.get(lastValueCount - 4);
+                        y1 += lastValueList.get(lastValueCount - 1) - lastValueList.get(lastValueCount - 3);
+                    }
+
+                    list.add(new PathData('C', Arrays.asList(x1, y1, x2, y2, x, y), x, y));
+                }
+                break;
+        }
+        return true;
     }
 
     /** 添加一个数值到数值列表 */
@@ -504,7 +529,7 @@ public final class VectorXmlParser {
         try {
             list.add(Float.parseFloat(value));
         } catch (Exception e) {
-            SvgLog.i("解析字符串数值异常。流程应立即终止。cause=" + e.getLocalizedMessage());
+            SvgLog.i("解析字符串数值异常。流程应立即终止。原因=" + e.getLocalizedMessage());
             return false;
         }
         return true;
@@ -572,20 +597,20 @@ public final class VectorXmlParser {
                 case 'S':
                 case 'C':
                 case 'T':
-                case 'A': //7
+                case 'A':
                     endX = valueList.get(valueCount - 2);
                     endY = valueList.get(valueCount - 1);
                     break;
                 case 'm': //2
-                case 'l': //2
-                case 't': //2
+                case 'l':
+                case 't':
                     for (int i = 0; i < valueCount; i += 2) {
                         endX += valueList.get(i);
                         endY += valueList.get(i + 1);
                     }
                     break;
                 case 's': //4
-                case 'q': //4
+                case 'q':
                     for (int i = 0; i < valueCount; i += 4) {
                         endX += valueList.get(i + 2);
                         endY += valueList.get(i + 3);
@@ -612,13 +637,15 @@ public final class VectorXmlParser {
         PathData pathData = new PathData(cmd, valueList, endX, endY);
 
         //如果是特殊的指令，先转换成普通指令，再保存数据
+        boolean ret;
         if (SvgCharUtil.isSvgSpecCommand(cmd)) {
-            convertSpecialCommand(list, pathData);
+            ret = addSpecialCommand(list, pathData);
+        } else {
+            ret = list.add(pathData);
         }
 
-        boolean ret = list.add(pathData);
         if (!ret) {
-            SvgLog.I("添加一个路径指令数据失败了！数据=" + pathData.toString());
+            SvgLog.I("添加路径指令数据失败了！数据=" + pathData.toString());
         }
     }
 

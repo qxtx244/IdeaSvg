@@ -8,7 +8,6 @@ import com.qxtx.idea.ideasvg.parser.VectorXmlParser;
 import com.qxtx.idea.ideasvg.tools.SvgLog;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -244,10 +243,9 @@ public final class PathElement {
 
         try {
             //更新到路径数据列表
-            VectorXmlParser.parsePathDataAttribute(pathString, pathDataList);
-
-            //生成路径对象
-            generatePath();
+            if (!VectorXmlParser.parsePathDataAttribute(pathString, pathDataList)) {
+                pathDataList.clear();
+            }
         } catch (Exception e) {
             SvgLog.i("解析pathData发生异常！" + e);
             e.printStackTrace();
