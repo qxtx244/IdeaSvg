@@ -1,5 +1,5 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="1024dp" android:height="1024dp"
+    android:width="200dp" android:height="200dp"
     android:viewportHeight="1024" android:viewportWidth="1024"
     android:alpha="1.0"
     android:name="测试xml"
@@ -8,7 +8,7 @@
     android:autoMirrored="false">
     <path
         android:strokeColor="#97DCFF"
-        android:strokeWidth="5"
+        android:strokeWidth="10"
         android:pathData="M10 80 C 40 10, 65 20, 95 80 S 150 150, 180 80" />
 <!--    <path-->
 <!--        android:strokeColor="#97DCFF"-->

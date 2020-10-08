@@ -8,8 +8,9 @@
     <com.qxtx.idea.ideasvg.view.IdeaSvgView
         android:id="@+id/viewSvg"
         android:background="@mipmap/bg"
-        app:svgSrc="@drawable/svg_test"
+        app:svgSrc="@drawable/ic_sofa"
+        app:svgCenter="true"
         android:layout_width="match_parent"
-        android:layout_height="300px" />
+        android:layout_height="match_parent" />
 
 </RelativeLayout>

@@ -1,5 +1,6 @@
 package com.qxtx.idea.ideasvg.xmlEntity;
 
+import android.graphics.Color;
 import android.support.annotation.IdRes;
 
 import java.util.ArrayList;
@@ -26,7 +27,7 @@ import java.util.List;
  *      这意味着path数值需要做对应的缩放，才能得到svg最终在实际画布中展示的尺寸。path数值从参考画布转换到此实际画布尺寸计算方法：
  *      比如实际画布大小w:100 h:100，参考画布大小w:500 h:300，则取宽高差值较大者，则path数值的缩放比率为：zoom = (500-100) / 500 = 0.8，path中的所有数值乘以这个比率。
  */
-public class VectorElement {
+public class VectorXmlInfo {
 
     /**
      * svg的实际宽度，dimen数值
@@ -84,7 +85,7 @@ public class VectorElement {
     /** clip-path标签数据列表 */
     private final List<ClipPathElement> clipPathElementList;
 
-    public VectorElement() {
+    public VectorXmlInfo() {
         pathElementList = new ArrayList<>(1);
         groupElementList = new ArrayList<>(1);
         clipPathElementList = new ArrayList<>(1);
@@ -98,7 +99,7 @@ public class VectorElement {
         viewportHeight = 0f;
         alpha = 1f;
         name = null;
-        tint = 0;
+        tint = Color.TRANSPARENT;
         tintMode = null;
         autoMirrored = false;
         pathElementList.clear();

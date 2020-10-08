@@ -7,6 +7,12 @@ package com.qxtx.idea.ideasvg.tools;
  */
 public final class SvgConsts {
 
+    public static final int INVALID_INT = Integer.MIN_VALUE;
+
+    public static final float INVALID_FLOAT = Float.MIN_VALUE;
+
+    public static final double INVALID_DOUBLE = Double.MIN_VALUE;
+
     public static final String SUPPORT_ROOT_TAG = "vector";
 
     public static final char SVG_START_CMD_UPPER = 'M';

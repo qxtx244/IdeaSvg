@@ -39,7 +39,7 @@ public final class PathElement {
     private float strokeAlpha;
 
     /** 填充颜色，默认为透明（无填充） */
-    private int  fillColor;
+    private int fillColor;
 
     /** 在.svg中，这个值可能是transparent，默认透明 */
     private float fillAlpha;
@@ -62,21 +62,21 @@ public final class PathElement {
         pathDataList = new ArrayList<>();
         pathString = null;
 
-        strokeWidth = Float.MIN_VALUE;
-        strokeColor = Color.parseColor("#00000000");
+        strokeWidth = SvgConsts.INVALID_FLOAT;
+        strokeColor = SvgConsts.INVALID_INT;
         strokeAlpha = 1f;
 
-        fillColor = Color.parseColor("#00000000");
+        fillColor = SvgConsts.INVALID_INT;
         fillAlpha = 1f;
 
         fillType = null;
         name = null;
-        strokeLineCap = Integer.MIN_VALUE;
-        strokeLineJoin = Integer.MIN_VALUE;
-        strokeMiterLimit = Integer.MIN_VALUE;
-        trimPathStart = Float.MIN_VALUE;
-        trimPathOffset = Float.MIN_VALUE;
-        trimPathEnd = Float.MIN_VALUE;
+        strokeLineCap = SvgConsts.INVALID_INT;
+        strokeLineJoin = SvgConsts.INVALID_INT;
+        strokeMiterLimit = SvgConsts.INVALID_INT;
+        trimPathStart = SvgConsts.INVALID_FLOAT;
+        trimPathOffset = SvgConsts.INVALID_FLOAT;
+        trimPathEnd = SvgConsts.INVALID_FLOAT;
     }
 
     public Path getPath() {
@@ -88,14 +88,16 @@ public final class PathElement {
     }
 
     /**
-     * 保存路径原始数据，并生成{@link #pathDataList}
+     * 保存原始路径数据字符串，并生成{@link #pathDataList}
+     * @param scale 数值缩放值
+     * @param pathString 原始路径数据字符串
      */
-    public void setPathString(String pathString) {
+    public void savePathString(float scale, String pathString) {
         this.pathString = pathString;
 
         try {
             //更新到路径数据列表
-            if (!VectorXmlParser.parsePathDataAttribute(pathString, pathDataList)) {
+            if (!VectorXmlParser.parsePathDataAttribute(scale, pathString, pathDataList)) {
                 pathDataList.clear();
                 path.reset();
                 return ;
@@ -219,10 +221,8 @@ public final class PathElement {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        if (pathDataList != null) {
-            for (PathData pathData : pathDataList) {
-                sb.append(pathData.toString()).append("\n");
-            }
+        for (PathData pathData : pathDataList) {
+            sb.append(pathData.toString()).append("\n");
         }
 
         return "PathParam{" +

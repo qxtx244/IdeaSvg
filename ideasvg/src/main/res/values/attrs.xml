@@ -11,28 +11,10 @@
         <!-- 控件高 -->
         <attr name="android:layout_height"/>
 
-        <!-- svg宽 -->
-<!--        <attr name="svgWidth" format="integer"/>-->
-        <!-- svg高 -->
-<!--        <attr name="svgHeight" format="integer"/>-->
-
         <!-- svg图形数据，引用vector xml -->
         <attr name="svgSrc" format="reference"/>
-<!--         svg的透明度，当定义了此属性，则svgSrc中定义的alpha值将会被忽略 -->
-<!--        <attr name="svgAlpha" format="float"/>-->
 
-<!--        &lt;!&ndash; svg绘制模式，[stroke]轮廓 [fill]填充 [stroke_and_fill]填充+轮廓 &ndash;&gt;-->
-<!--        <attr name="svgStyle" format="flags">-->
-<!--            <flag name="stroke" value="0x1"/>-->
-<!--            <flag name="fill" value="0x2"/>-->
-<!--            <flag name="stroke_and_fill" value="0x3"/>-->
-<!--        </attr>-->
-<!--        -->
-<!--        &lt;!&ndash; 轮廓线条宽度，单位为px &ndash;&gt;-->
-<!--        <attr name="strokeWidthPx" format="integer"/>-->
-<!--        &lt;!&ndash; 轮廓线条颜色 &ndash;&gt;-->
-<!--        <attr name="strokeColor" format="enum"/>-->
-<!--        &lt;!&ndash; svg填充颜色 &ndash;&gt;-->
-<!--        <attr name="fillColor" format="color"/>-->
+        <!-- svg是否居中显示 -->
+        <attr name="svgCenter" format="boolean"/>
     </declare-styleable>
 </resources>
