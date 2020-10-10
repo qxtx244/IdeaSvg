@@ -89,15 +89,14 @@ public final class PathElement {
 
     /**
      * 保存原始路径数据字符串，并生成{@link #pathDataList}
-     * @param scale 数值缩放值
      * @param pathString 原始路径数据字符串
      */
-    public void savePathString(float scale, String pathString) {
+    public void savePathString(String pathString) {
         this.pathString = pathString;
 
         try {
             //更新到路径数据列表
-            if (!VectorXmlParser.parsePathDataAttribute(scale, pathString, pathDataList)) {
+            if (!VectorXmlParser.parsePathDataAttribute(pathString, pathDataList)) {
                 pathDataList.clear();
                 path.reset();
                 return ;

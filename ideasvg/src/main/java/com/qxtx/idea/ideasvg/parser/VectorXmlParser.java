@@ -8,6 +8,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 
+import com.qxtx.idea.ideasvg.BuildConfig;
 import com.qxtx.idea.ideasvg.tools.ScreenUtil;
 import com.qxtx.idea.ideasvg.tools.SvgCharUtil;
 import com.qxtx.idea.ideasvg.tools.SvgConsts;
@@ -33,7 +34,7 @@ import java.util.List;
  */
 public final class VectorXmlParser {
 
-    /** Application cotext */
+    /** Application context */
     private final Context mContext;
 
     public VectorXmlParser(@NonNull Context context) {
@@ -102,11 +103,10 @@ public final class VectorXmlParser {
 
     /**
      * 解析一条path标签的pathData属性，得到指令符数据集
-     * @param scale 数值的缩放值
      * @param pathData 从xml中得到的path标签的pathData属性字符串
      * @param pathDataList 目标数据列表，保存解析结果
      */
-    public static boolean parsePathDataAttribute(float scale, @NonNull String pathData, @NonNull List<PathData> pathDataList) {
+    public static boolean parsePathDataAttribute(@NonNull String pathData, @NonNull List<PathData> pathDataList) {
         pathDataList.clear();
         if (TextUtils.isEmpty(pathData)) {
             return false;
@@ -177,7 +177,7 @@ public final class VectorXmlParser {
                 //碰到指令符，本次指令符轨迹数据已全部获取到，完成本次循环
                 if (SvgCharUtil.isSvgCommand(ch)) {
                     SvgLog.I("碰到指令符[" + ch + "]，位置[" + pos + "]. 此时未处理数据[" + sb.toString() + "].");
-                    if (sb.length() > 0 && !addValue(valueList, sb.toString(), scale)) {
+                    if (sb.length() > 0 && !addValue(valueList, sb.toString())) {
                         return false;
                     }
                     SvgLog.i("一个指令符的数值获取完成，当前位置：" + pos);
@@ -191,7 +191,7 @@ public final class VectorXmlParser {
                         continue;
                     }
 
-                    if (!addValue(valueList, sb.toString(), scale)) {
+                    if (!addValue(valueList, sb.toString())) {
                         SvgLog.I("解析指令符的数值失败！指令[" + cmd + "]，当前解析位置[" + pos + "].");
                         return false;
                     }
@@ -205,7 +205,7 @@ public final class VectorXmlParser {
                 else if (ch == '-') {
                     if (negPointReady || decimalPointReady) {
                         //碰到的是下一个数值的减号，立即完成当前字符的保存
-                        if (!addValue(valueList, sb.toString(), scale)) {
+                        if (!addValue(valueList, sb.toString())) {
                             return false;
                         }
                         sb.delete(0, sb.length());
@@ -219,7 +219,7 @@ public final class VectorXmlParser {
                 else if (ch == '.') {
                     if (decimalPointReady) {
                         //碰到的是下一个数值的逗号，立即完成当前字符的保存
-                        if (!addValue(valueList, sb.toString(), scale)) {
+                        if (!addValue(valueList, sb.toString())) {
                             return false;
                         }
                         sb.delete(0, sb.length());
@@ -240,7 +240,7 @@ public final class VectorXmlParser {
                 if (pos + 1 == dataLen && sb.length() > 0) {
                     String finalStr = sb.toString();
                     SvgLog.i("到达结尾，整个字符串遍历完成，处理当前收集的字符串[" + finalStr + "].");
-                    if (!addValue(valueList, finalStr, scale)) {
+                    if (!addValue(valueList, finalStr)) {
                         return false;
                     }
                 }
@@ -282,14 +282,28 @@ public final class VectorXmlParser {
                 continue;
             }
 
+            boolean isRefCommand = Character.isLowerCase(cmd);
             switch (SvgCharUtil.toUpper(cmd)) {
                 case 'M': //2
                     path.moveTo(endCoordinate[0], endCoordinate[1]);
                     break;
                 case 'H': //1
                 case 'V': //1
-                case 'L': //2
                     path.lineTo(endCoordinate[0], endCoordinate[1]);
+                    break;
+                case 'L': //2
+                    for (int i = 0; i < valueCount; i += 2) {
+                        if (i + 1 >= valueCount) {
+                            SvgLog.I("无法生成路径：未获取到足够的数值。cmd[" + cmd + "]. values" + Arrays.toString(values.toArray(new Float[0])));
+                            return false;
+                        }
+
+                        if (isRefCommand) {
+                            path.rLineTo(values.get(i), values.get(i + 1));
+                        } else {
+                            path.lineTo(values.get(i), values.get(i + 1));
+                        }
+                    }
                     break;
                 case 'Q': //4
                     for (int i = 0; i < valueCount; i += 4) {
@@ -298,7 +312,6 @@ public final class VectorXmlParser {
                             return false;
                         }
 
-                        boolean isRefCommand = Character.isLowerCase(cmd);
                         if (isRefCommand) {
                             path.rQuadTo(values.get(i), values.get(i + 1), values.get(i + 2), values.get(i + 3));
                         } else {
@@ -313,7 +326,6 @@ public final class VectorXmlParser {
                             return false;
                         }
 
-                        boolean isRefCommand = Character.isLowerCase(cmd);
                         if (isRefCommand) {
                             path.rCubicTo(values.get(i), values.get(i + 1), values.get(i + 2), values.get(i + 3), values.get(i + 4), values.get(i + 5));
                         } else {
@@ -336,7 +348,6 @@ public final class VectorXmlParser {
                         double phi = values.get(i + 2);
                         double fA = values.get(i + 3);
                         double fS = values.get(i + 4);
-                        boolean isRefCommand = Character.isLowerCase(cmd);
                         double x2 = values.get(i + 5) + (isRefCommand ? x1 : 0);
                         double y2 = values.get(i + 6) + (isRefCommand ? y1 : 0);
                         generateEllipticalArcPath(path, x1, y1, rxHalf, ryHalf, phi, fA, fS, x2, y2);
@@ -379,6 +390,7 @@ public final class VectorXmlParser {
                 x1, y1, rxHalf, ryHalf, phi, fA, fS, x2, y2));
 
         if (rxHalf == ryHalf) {
+            SvgLog.I("半长轴和半短轴长度相同，可以直接使用圆弧线api进行绘制");
             phi = 0;
         } else {
             phi %= 360;
@@ -445,18 +457,19 @@ public final class VectorXmlParser {
         for (int i = 0; i < attrCount; i++) {
             switch (xmlParser.getAttributeName(i)) {
                 case "pathData":
-                    //需要计算实际的尺寸，即比较width&height 和 viewportWidth&viewportHeight
-                    float width = info.getWidth();
-                    float height = info.getHeight();
-                    float viewportWidth = info.getViewportWidth();
-                    float viewportHeight = info.getViewportHeight();
-                    if (width <= 0f || height <= 0f) {
-                        throw new IllegalStateException("宽高值必须大于0！");
-                    }
-
-                    float scale = Math.max(width / viewportWidth, height / viewportHeight);
-                    SvgLog.I(String.format("width&height=%s&%s，viewportWidth&viewportHeight=%s&%s,尺寸缩放值%s", width, height, viewportWidth, viewportHeight, scale));
-                    element.savePathString(scale, xmlParser.getAttributeValue(i));
+//                    //需要计算实际的尺寸，即比较width&height 和 viewportWidth&viewportHeight
+//                    float width = info.getWidth();
+//                    float height = info.getHeight();
+//                    float viewportWidth = info.getViewportWidth();
+//                    float viewportHeight = info.getViewportHeight();
+//                    if (width <= 0f || height <= 0f) {
+//                        throw new IllegalStateException("宽高值必须大于0！");
+//                    }
+//
+//                    float scaleW = width / viewportWidth;
+//                    float scaleH = height / viewportHeight;
+//                    SvgLog.I(String.format("width&height=%s&%s，viewportWidth&viewportHeight=%s&%s,尺寸缩放值%s", width, height, viewportWidth, viewportHeight, (scaleW + "&" + scaleH)));
+                    element.savePathString(xmlParser.getAttributeValue(i));
                     break;
                 case "strokeWidth":
                     float strokeWidth = xmlParser.getAttributeFloatValue(i, element.getStrokeWidth());
@@ -666,13 +679,14 @@ public final class VectorXmlParser {
     }
 
     /** 添加一个数值到数值列表 */
-    private static boolean addValue(List<Float> list, String value, float scale) {
+    private static boolean addValue(List<Float> list, String value) {
 //        SvgLog.i("得到一个数值[" + value + "].");
         if (TextUtils.isEmpty(value)) {
             return false;
         }
+        //LYX_TAG 2020/10/10 23:12 一些参数不能使用缩放！！！如椭圆弧路径里的一些参数
         try {
-            list.add(Float.parseFloat(value) * scale);
+            list.add(Float.parseFloat(value));
         } catch (Exception e) {
             SvgLog.i("解析字符串数值[" + value + "]异常。流程应立即终止。原因=" + e.getLocalizedMessage());
             return false;
@@ -787,6 +801,26 @@ public final class VectorXmlParser {
             ret = addSpecialCommand(list, pathData);
         } else {
             ret = list.add(pathData);
+        }
+
+        //LYX_TAG 2020/10/10 23:08 仅调试用
+        if (BuildConfig.DEBUG) {
+            StringBuilder sb = new StringBuilder();
+            for (PathData data : list) {
+                if (data == null) {
+                    continue;
+                }
+                char anchor = data.getCommand();
+                List<Float> values = data.getValueList();
+                String valueString = null;
+                if (values != null) {
+                    valueString = Arrays.toString(values.toArray(new Float[0]));
+                }
+                sb.append(anchor).append(valueString)
+                        .append(", 终点坐标(").append(data.getEndCoordinate()[0]).append(",").append(data.getEndCoordinate()[1]).append(")")
+                        .append("\n");
+            }
+            SvgLog.I("当前路径数据列表:\n" + sb.toString());
         }
 
         if (!ret) {
