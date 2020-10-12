@@ -252,10 +252,12 @@ public final class VectorXmlParser {
     }
 
     /**
-     * 生成Path对象列表
+     * 生成Path对象列表，注意，缩放不要作用于一些特殊的数值，如A指令的大小角度/弧线方向等参数
+     * @param scaleW 宽的缩放值
+     * @param scaleH 高的缩放值
      * @throws Exception 如果数据不正确（如某个指令符携带的数值数量不符合要求），将会导致解析出错，抛出异常
      */
-    public static boolean generatePath(@NonNull List<PathData> list, @NonNull Path path) throws Exception {
+    public static boolean generatePath(float scaleW, float scaleH, @NonNull List<PathData> list, @NonNull Path path) throws Exception {
         path.reset();
         if (list.size() == 0) {
             return false;
@@ -285,11 +287,11 @@ public final class VectorXmlParser {
             boolean isRefCommand = Character.isLowerCase(cmd);
             switch (SvgCharUtil.toUpper(cmd)) {
                 case 'M': //2
-                    path.moveTo(endCoordinate[0], endCoordinate[1]);
+                    path.moveTo(endCoordinate[0] * scaleW, endCoordinate[1] * scaleH);
                     break;
                 case 'H': //1
                 case 'V': //1
-                    path.lineTo(endCoordinate[0], endCoordinate[1]);
+                    path.lineTo(endCoordinate[0] * scaleW, endCoordinate[1] * scaleH);
                     break;
                 case 'L': //2
                     for (int i = 0; i < valueCount; i += 2) {
@@ -299,9 +301,9 @@ public final class VectorXmlParser {
                         }
 
                         if (isRefCommand) {
-                            path.rLineTo(values.get(i), values.get(i + 1));
+                            path.rLineTo(values.get(i) * scaleW, values.get(i + 1) * scaleH);
                         } else {
-                            path.lineTo(values.get(i), values.get(i + 1));
+                            path.lineTo(values.get(i) * scaleW, values.get(i + 1) * scaleH);
                         }
                     }
                     break;
@@ -313,9 +315,11 @@ public final class VectorXmlParser {
                         }
 
                         if (isRefCommand) {
-                            path.rQuadTo(values.get(i), values.get(i + 1), values.get(i + 2), values.get(i + 3));
+                            path.rQuadTo(values.get(i) * scaleW, values.get(i + 1) * scaleH,
+                                    values.get(i + 2) * scaleW, values.get(i + 3) * scaleH);
                         } else {
-                            path.quadTo(values.get(i), values.get(i + 1), values.get(i + 2), values.get(i + 3));
+                            path.quadTo(values.get(i) * scaleW, values.get(i + 1) * scaleH,
+                                    values.get(i + 2) * scaleW, values.get(i + 3) * scaleH);
                         }
                     }
                     break;
@@ -327,9 +331,13 @@ public final class VectorXmlParser {
                         }
 
                         if (isRefCommand) {
-                            path.rCubicTo(values.get(i), values.get(i + 1), values.get(i + 2), values.get(i + 3), values.get(i + 4), values.get(i + 5));
+                            path.rCubicTo(values.get(i) * scaleW, values.get(i + 1) * scaleH,
+                                    values.get(i + 2) * scaleW, values.get(i + 3) * scaleH,
+                                    values.get(i + 4) * scaleW, values.get(i + 5) * scaleH);
                         } else {
-                            path.cubicTo(values.get(i), values.get(i + 1), values.get(i + 2), values.get(i + 3), values.get(i + 4), values.get(i + 5));
+                            path.cubicTo(values.get(i) * scaleW, values.get(i + 1) * scaleH,
+                                    values.get(i + 2) * scaleW, values.get(i + 3) * scaleH,
+                                    values.get(i + 4) * scaleW, values.get(i + 5) * scaleH);
                         }
                     }
                     break;
@@ -350,7 +358,9 @@ public final class VectorXmlParser {
                         double fS = values.get(i + 4);
                         double x2 = values.get(i + 5) + (isRefCommand ? x1 : 0);
                         double y2 = values.get(i + 6) + (isRefCommand ? y1 : 0);
-                        generateEllipticalArcPath(path, x1, y1, rxHalf, ryHalf, phi, fA, fS, x2, y2);
+
+                        generateEllipticalArcPath(path, x1 * scaleW, y1 * scaleH,
+                                rxHalf * scaleW, ryHalf * scaleH, phi, fA, fS, x2 * scaleW, y2 * scaleH);
                     }
                     break;
                 case 'T': //2
@@ -400,9 +410,8 @@ public final class VectorXmlParser {
         double dist = Math.abs(x2 - x1);
         double longAxis = 2 * rxHalf;
         if (phi == 0 && dist > longAxis) {
-            rxHalf = dist / 2;
-            double zoom = dist / longAxis;
-            ryHalf *= zoom;
+            SvgLog.I("数据错误！无法形成椭圆弧线路径");
+            path.lineTo((float)x2, (float)y2);
         }
 
         double cosPhi = Math.cos(phi);
@@ -437,13 +446,7 @@ public final class VectorXmlParser {
 
         //通过x1 —> x2的x坐标值递增，得到对应的y坐标值，逐个lineTo，细粒度为1°
         path.moveTo((float)x1, (float)y1);
-
-        double x, y;
-        double deltaValue = (x2 - x1) / 180;
-        for (x = x1; x <= x2; x += deltaValue) {
-            y = cy + Math.sqrt(1 - Math.pow(x - cx, 2) / Math.pow(rxHalf, 2)) * ryHalf;
-            path.lineTo((float)x, (float)y);
-        }
+        //LYX_TAG 2020/10/13 0:05 这里需要将一段椭圆弧线以直线拼接的方式画出来
     }
 
     /**
@@ -457,19 +460,20 @@ public final class VectorXmlParser {
         for (int i = 0; i < attrCount; i++) {
             switch (xmlParser.getAttributeName(i)) {
                 case "pathData":
-//                    //需要计算实际的尺寸，即比较width&height 和 viewportWidth&viewportHeight
-//                    float width = info.getWidth();
-//                    float height = info.getHeight();
-//                    float viewportWidth = info.getViewportWidth();
-//                    float viewportHeight = info.getViewportHeight();
-//                    if (width <= 0f || height <= 0f) {
-//                        throw new IllegalStateException("宽高值必须大于0！");
-//                    }
-//
-//                    float scaleW = width / viewportWidth;
-//                    float scaleH = height / viewportHeight;
-//                    SvgLog.I(String.format("width&height=%s&%s，viewportWidth&viewportHeight=%s&%s,尺寸缩放值%s", width, height, viewportWidth, viewportHeight, (scaleW + "&" + scaleH)));
-                    element.savePathString(xmlParser.getAttributeValue(i));
+                    //需要计算实际的尺寸，即比较width&height 和 viewportWidth&viewportHeight
+                    float width = info.getWidth();
+                    float height = info.getHeight();
+                    float viewportWidth = info.getViewportWidth();
+                    float viewportHeight = info.getViewportHeight();
+                    if (width <= 0f || height <= 0f
+                            || viewportWidth <= 0f || viewportHeight <= 0f) {
+                        throw new IllegalStateException("宽高值必须大于0！");
+                    }
+
+                    float scaleW = width / viewportWidth;
+                    float scaleH = height / viewportHeight;
+                    SvgLog.I(String.format("width&height=%s&%s，viewportWidth&viewportHeight=%s&%s,尺寸缩放值%s", width, height, viewportWidth, viewportHeight, (scaleW + "&" + scaleH)));
+                    element.savePathString(scaleW, scaleH, xmlParser.getAttributeValue(i));
                     break;
                 case "strokeWidth":
                     float strokeWidth = xmlParser.getAttributeFloatValue(i, element.getStrokeWidth());

@@ -89,9 +89,11 @@ public final class PathElement {
 
     /**
      * 保存原始路径数据字符串，并生成{@link #pathDataList}
+     * @param scaleW 宽的缩放值
+     * @param scaleH 高的缩放值
      * @param pathString 原始路径数据字符串
      */
-    public void savePathString(String pathString) {
+    public void savePathString(float scaleW, float scaleH, String pathString) {
         this.pathString = pathString;
 
         try {
@@ -102,7 +104,7 @@ public final class PathElement {
                 return ;
             }
 
-            if (!VectorXmlParser.generatePath(pathDataList, path)) {
+            if (!VectorXmlParser.generatePath(scaleW, scaleH, pathDataList, path)) {
                 pathDataList.clear();
                 path.reset();
                 return ;
