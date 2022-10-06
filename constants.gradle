@@ -2,7 +2,7 @@ ext {
     javaVer = JavaVersion.VERSION_1_8
 
     minSdkVer = 21
-    compileSdkVer = 26
+    compileSdkVer = 30
     targetSdkVer = 21
     buildToolsVer = '26.0.2'
 

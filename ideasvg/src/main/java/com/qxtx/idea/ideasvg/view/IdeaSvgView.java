@@ -407,7 +407,7 @@ public class IdeaSvgView extends View implements ISvgView, ISvgViewExtend {
         });
         animator.addListener(new AnimatorListenerAdapter() {
             @Override
-            public void onAnimationCancel(Animator animation) {
+            public void onAnimationCancel(android.animation.Animator animation) {
                 super.onAnimationCancel(animation);
 
                 if (listener != null) {
@@ -416,7 +416,7 @@ public class IdeaSvgView extends View implements ISvgView, ISvgViewExtend {
             }
 
             @Override
-            public void onAnimationEnd(Animator animation) {
+            public void onAnimationEnd(android.animation.Animator animation) {
                 super.onAnimationEnd(animation);
 
                 //svg替换完成，备份原始数据
@@ -428,7 +428,7 @@ public class IdeaSvgView extends View implements ISvgView, ISvgViewExtend {
             }
 
             @Override
-            public void onAnimationStart(Animator animation) {
+            public void onAnimationStart(android.animation.Animator animation) {
                 super.onAnimationStart(animation);
 
                 if (listener != null) {
@@ -904,7 +904,8 @@ public class IdeaSvgView extends View implements ISvgView, ISvgViewExtend {
         mIsSvgAnimRunning = true;
 
         int destAlpha = mAlpha;
-        mValueAnim = ValueAnimator.ofInt(oldAlpha, destAlpha).setDuration(durationMs);
+        mValueAnim = new MyValueAnimator(oldAlpha, destAlpha);
+        mValueAnim.setDuration(durationMs);
         mValueAnim.setInterpolator(new LinearInterpolator());
         mValueAnim.addUpdateListener(animation -> {
             if (!isSvgAnimRunning()) {
@@ -946,7 +947,8 @@ public class IdeaSvgView extends View implements ISvgView, ISvgViewExtend {
 
         final float destX = mTranslateX;
         final float destY = mTranslateY;
-        mValueAnim = ValueAnimator.ofFloat(0f, 1f).setDuration(durationMs);
+        mValueAnim = new MyValueAnimator(0f, 1f);
+        mValueAnim.setDuration(durationMs);
         mValueAnim.setInterpolator(new LinearInterpolator());
         mValueAnim.addUpdateListener(animation -> {
             if (!isSvgAnimRunning()) {
@@ -1013,7 +1015,8 @@ public class IdeaSvgView extends View implements ISvgView, ISvgViewExtend {
 
         mScale = scale;
 
-        mValueAnim = ValueAnimator.ofFloat(oldScale, scale).setDuration(durationMs);
+        mValueAnim = new MyValueAnimator(oldScale, scale);
+        mValueAnim.setDuration(durationMs);
         mValueAnim.setInterpolator(new LinearInterpolator());
         mValueAnim.addUpdateListener(animation -> {
             float curScale = (float)animation.getAnimatedValue();
@@ -1196,7 +1199,7 @@ public class IdeaSvgView extends View implements ISvgView, ISvgViewExtend {
         }
 
         @Override
-        public void onAnimationStart(Animator animation) {
+        public void onAnimationStart(android.animation.Animator animation) {
             super.onAnimationStart(animation);
             SvgLog.I("svg anim start");
             mIsSvgAnimRunning = true;
@@ -1207,7 +1210,7 @@ public class IdeaSvgView extends View implements ISvgView, ISvgViewExtend {
         }
 
         @Override
-        public void onAnimationCancel(Animator animation) {
+        public void onAnimationCancel(android.animation.Animator animation) {
             SvgLog.I("svg anim cancel");
             mIsSvgAnimRunning = false;
 
@@ -1217,7 +1220,7 @@ public class IdeaSvgView extends View implements ISvgView, ISvgViewExtend {
         }
 
         @Override
-        public void onAnimationEnd(Animator animation) {
+        public void onAnimationEnd(android.animation.Animator animation) {
             SvgLog.I("anim end");
             mIsSvgAnimRunning = false;
 
@@ -1578,7 +1581,7 @@ public class IdeaSvgView extends View implements ISvgView, ISvgViewExtend {
             
             animator.addListener(new AnimatorListenerAdapter() {
                 @Override
-                public void onAnimationCancel(Animator animation) {
+                public void onAnimationCancel(android.animation.Animator animation) {
                     if (mSvgAnimationList.size() > 0) {
                         mSvgAnimationList.remove(0);
                     }
@@ -1591,7 +1594,7 @@ public class IdeaSvgView extends View implements ISvgView, ISvgViewExtend {
                 }
 
                 @Override
-                public void onAnimationEnd(Animator animation) {
+                public void onAnimationEnd(android.animation.Animator animation) {
                     if (mSvgAnimationList.size() > 0) {
                         mSvgAnimationList.remove(0);
                     }
@@ -1604,7 +1607,7 @@ public class IdeaSvgView extends View implements ISvgView, ISvgViewExtend {
                 }
 
                 @Override
-                public void onAnimationStart(Animator animation) {
+                public void onAnimationStart(android.animation.Animator animation) {
                     SvgLog.I("SvgAnimation start.");
                     isRunning.set(true);
 
@@ -1680,7 +1683,7 @@ public class IdeaSvgView extends View implements ISvgView, ISvgViewExtend {
 
             animator.addListener(new AnimatorListenerAdapter() {
                 @Override
-                public void onAnimationCancel(Animator animation) {
+                public void onAnimationCancel(android.animation.Animator animation) {
                     if (mSvgAnimationList.size() > 0) {
                         mSvgAnimationList.remove(0);
                     }
@@ -1693,7 +1696,7 @@ public class IdeaSvgView extends View implements ISvgView, ISvgViewExtend {
                 }
 
                 @Override
-                public void onAnimationEnd(Animator animation) {
+                public void onAnimationEnd(android.animation.Animator animation) {
                     if (mSvgAnimationList.size() > 0) {
                         mSvgAnimationList.remove(0);
                     }
@@ -1708,7 +1711,7 @@ public class IdeaSvgView extends View implements ISvgView, ISvgViewExtend {
                 }
 
                 @Override
-                public void onAnimationStart(Animator animation) {
+                public void onAnimationStart(android.animation.Animator animation) {
                     SvgLog.I("SvgAnimation start.");
                     isRunning.set(true);
 
@@ -1724,6 +1727,35 @@ public class IdeaSvgView extends View implements ISvgView, ISvgViewExtend {
             } else {
                 animator.start();
             }
+        }
+    }
+
+    private class MyValueAnimator extends ValueAnimator {
+
+        private MyValueAnimator(float... values) {
+            setFloatValues(values);
+        }
+
+        private MyValueAnimator(int... values) {
+            setIntValues(values);
+        }
+
+        @Override
+        public void start() {
+            addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationCancel(Animator animation) {
+                    super.onAnimationCancel(animation);
+                    animation.removeAllListeners();
+                }
+
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    super.onAnimationEnd(animation);
+                    animation.removeAllListeners();
+                }
+            });
+            super.start();
         }
     }
 }
